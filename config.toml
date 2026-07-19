@@ -1,0 +1,57 @@
+# config.toml — all maskinberoende inställning bor här.
+# Byt värden här vid flytt laptop -> arbetsstation. Ingen kodändring ska behövas.
+
+[data]
+# Rot för allt ljud (inkorgen + temamappar). Ligger utanför projektet.
+root = "C:/Users/gunther/Dropbox/arkiv/mediadev/transkribera"
+# Steg 1: en enda hårdkodad testfil, relativt root. Byts för hand.
+test_file = "zego-torpseminarium.m4a"
+
+[model]
+# Modellstorlek är konfiguration, inte konstant. medium nu, large när VRAM finns.
+name = "KBLab/kb-whisper-medium"
+# "auto" = autodetektera (cuda om tillgängligt, annars cpu). Tvinga med "cuda"/"cpu".
+device = "auto"
+# "auto" = float16 på cuda, int8 på cpu. Kan tvingas, t.ex. "int8_float16".
+compute_type = "auto"
+# Modellcache. Vikterna (~1,5 GB för medium) laddas ner hit första gången.
+# Relativt projektroten om inte absolut sökväg.
+download_root = "models"
+# Whisper-revision på Hugging Face:
+#   ""         = standard
+#   "subtitle" = kondenserad stil
+#   "strict"   = mer verbatim
+revision = ""
+
+[transcription]
+language = "sv"
+beam_size = 5
+# Trådar på CPU. 0 = låt CTranslate2 välja utifrån maskinen.
+cpu_threads = 0
+# condition_on_previous_text=False rekommenderas av KBLab (minskar upprepningar).
+condition_on_previous_text = false
+
+[corrections]
+# Steg b: flaggning av oklarheter. Relativ tröskel: flagga de X % av orden som
+# har lägst probability i JSON. Robust mot att olika modeller lägger sina
+# sannolikheter på olika skala (kb-whisper-medium ligger t.ex. lågt, median ~0,69).
+flag_percentile = 10
+# Kontextfönstret runt de flaggade orden, i antal ord (7–10 enligt önskemål).
+context_max_words = 10
+context_min_words = 7
+# Flaggade ord vars inbördes avstånd (i ord) är <= detta slås ihop till ett block
+# med gemensam kontext, i stället för att få var sitt block.
+merge_gap = 4
+# LLM-detektorn (flagga-llm.py):
+llm_modell = "claude-opus-4-8"
+# Antal ord ur filens början som skickas till Claude. 0 = hela filen.
+# Börja litet vid prototyping — de första minuterna räcker för att se träffbilden
+# mot kända fel (Dunper, dik, gik, punkt ligger alla inom de första ~150 orden).
+llm_max_ord = 0
+# Ord per API-anrop. Filen delas i bitar av den här storleken; varje bit får
+# globala index så inga index behöver mappas om. Små bitar = pålitligare, fler anrop.
+llm_chunk_ord = 300
+
+[logging]
+# Loggfil relativt projektroten. Varje körning appendas.
+file = "logs/transkribering.log"

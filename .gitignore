@@ -1,0 +1,47 @@
+# Projektspecifikt
+notes.txt
+notes.md
+venv/
+models/
+logs/
+# Genererad pekare åt granska/-GUI:t (skrivs av migrera-corrections.py)
+granska/current.json
+# Arbetskopia av besluten (GUI:t redigerar den; fröas ur /data-sidecaren)
+granska/state/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Miljövariabler
+.env
+.env.*
+!.env.example
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

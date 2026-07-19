@@ -1,0 +1,34 @@
+# Ordlista — egennamn och begrepp som återkommer i Lars memon.
+#
+# Två användningar:
+#   1. LLM-detektorn (steg b): Claude får listan som facit så den känner igen
+#      korrekta termer (Wimber) och förstår vad förvanskningar borde vara
+#      (Dunper -> Gunther). Ingen längdgräns här — listan får växa fritt.
+#   2. initial_prompt till Whisper (steg a, senare): matas in så modellen
+#      träffar rätt från början. OBS längdgräns ~224 tokens (se README/CLAUDE.md)
+#      — hela listan får inte plats när den vuxit. Då krävs prioritering eller
+#      per-temamapp-prompt. För LLM-bruket spelar det ingen roll.
+#
+# Format: en term per rad. Rader som börjar med # är kommentarer.
+# Behåll versaler som de står — de kan vara avsiktliga (se sNARlika).
+
+Gunther
+Ché Ahn
+NAR
+hyperkarismatik
+karismatik
+Joseph Z
+C. Peter Wagner
+Wimber
+Jezebel
+The Jezebel Spirit
+
+# 'Dominionism' är den etablerade formen. Du skrev "Dominionionism" — jag tolkade
+# det som en felskrivning och rättade. Ändra tillbaka om du menade något annat.
+Dominionism
+
+# sNARlika: ordet "snarlika" med NAR i versaler — en avsiktlig ordvits, inte en
+# Whisper-vokabelterm. Whisper återger inte versaler pålitligt, så den kapseln
+# hör hemma i ett senare rättnings-/stilsteg, inte i initial_prompt. Ligger här
+# så den inte glöms bort.
+sNARlika

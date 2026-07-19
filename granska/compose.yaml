@@ -1,0 +1,20 @@
+# Läsvyn (steg 1a). Kör från granska/:
+#     docker compose up
+# Öppna sedan http://localhost:8137
+# (8080 är upptagen av webbteknik.nu på den här maskinen; 8137 är ledig.)
+#
+# DATA_ROOT (var ljud/JSON ligger) läses ur .env i den här mappen. Den genereras
+# av migrera-corrections.py ur config.toml — kör det skriptet först. Inga
+# maskinberoende sökvägar i koden; allt kommer från config.toml.
+services:
+  granska:
+    image: php:8.3-cli
+    working_dir: /app
+    command: php -S 0.0.0.0:8080 -t /app
+    ports:
+      - "8137:8080"
+    environment:
+      - DATA_DIR=/data
+    volumes:
+      - ./:/app
+      - "${DATA_ROOT:?saknas — kör 'python migrera-corrections.py' som skriver granska/.env}:/data:ro"

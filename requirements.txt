@@ -1,0 +1,7 @@
+# Steg 1: transkribering med KBLabs svenska Whisper via faster-whisper (CTranslate2).
+# faster-whisper drar in ctranslate2, tokenizers, huggingface-hub, av (ffmpeg-bindning), onnxruntime.
+# Ingen torch behövs — CUDA-detektering görs via ctranslate2.
+faster-whisper>=1.1.0
+
+# Steg b (LLM-detektor, flagga-llm.py): Anthropic SDK. Drar in pydantic (structured output).
+anthropic>=0.69
