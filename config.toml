@@ -52,6 +52,14 @@ llm_max_ord = 0
 # globala index så inga index behöver mappas om. Små bitar = pålitligare, fler anrop.
 llm_chunk_ord = 300
 
+[forbattring]
+# Steg c: språklig förbättring. Använder samma modell som corrections.llm_modell.
+# Segment per API-anrop (större = färre anrop och mer sammanhang för styckes-
+# indelning; mindre = billigare per anrop).
+segment_per_anrop = 90
+# 0 = hela filen. Sätt lågt vid test för att billigt se kvaliteten på utdata.
+max_segment = 0
+
 [logging]
 # Loggfil relativt projektroten. Varje körning appendas.
 file = "logs/transkribering.log"

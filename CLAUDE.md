@@ -154,6 +154,16 @@ utfyllnadsord och falska starter, sätter interpunktion, delar i stycken.
 **Lars stil och formuleringar ska överleva.** Detta är inte en omskrivning. Är
 meningen begriplig som den är, ska den stå kvar.
 
+**Icke-innehåll tas bort — och det är inte omskrivning.** Skilj två saker: att
+städa språket i memot (ovan), och att ta bort material som aldrig hörde till memot.
+Det senare ska **föreslås för radering**, inte tyst kapas: avslutande skräp efter
+att föredraget är slut (Lars spelar in med hörapparater; efter t.ex. *"Tack så
+mycket, stort tack till dig Lars"* är resten publikinteraktion av usel kvalitet som
+transkriberas till nonsens), och inskjutna avbrott mitt i — hundtilltal, eller
+hälsningar till en bekant han möter. Detta krockar inte med regeln ovan: det
+raderade är inte Lars innehåll. Instruktionen till LLM:n måste ta denna hänsyn, och
+det borttagna ska gå att granska (skäl anges, samlas i en sidofil).
+
 Producerar två nya filer med egna namn (originalen bevaras):
 
 - **`*-korrigerad.srt`** — samma segmentindelning, städad text.
