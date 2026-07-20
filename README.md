@@ -127,10 +127,10 @@ När granskningen är klar skrivs besluten in i JSON:en:
 ./venv/Scripts/python.exe applicera-corrections.py
 ```
 
-Säkerhetskopierar `<namn>.json` → `<namn>.bak.json` (en gång), skriver den
+Säkerhetskopierar `<namn>.json` → `<namn>-bak.json` (en gång), skriver den
 korrigerade datan i `.json`, sätter `probability=1.0` på granskade ord, och
 regenererar `.srt`/`.txt`. Läser alltid rundans orörda bas som källa (runda 1:
-`.bak.json`; runda 2: sidecarens `base_json` → `.bak2.json`) — **idempotent**:
+`-bak.json`; runda 2: sidecarens `base_json` → `-bak2.json`) — **idempotent**:
 kör om utan skada. Osäkra och ogranskade ord lämnas orörda. Finns en runda
 2-sidecar (`-corrections-2.json`) appliceras den; annars runda 1.
 
@@ -145,7 +145,7 @@ starkare semantisk läsning — modell i `corrections.runda2_modell`):
 ./venv/Scripts/python.exe granska-igen.py
 ```
 
-Skapar `<namn>.bak2.json` (runda 2:s bas, en gång) och skriver sidecaren
+Skapar `<namn>-bak2.json` (runda 2:s bas, en gång) och skriver sidecaren
 `<namn>-corrections-2.json` direkt — inget migrera-steg. `granska/current.json`
 pekas om, så samma GUI används för granskningen; därefter samma
 `applicera-corrections.py`. Bortfallsflaggor (märkta BORTFALL i skälet) rättas

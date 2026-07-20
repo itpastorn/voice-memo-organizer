@@ -7,8 +7,8 @@ Det här skriptet läser den RÄTTADE JSON:en och låter Claude Fable 5 (starkar
 semantisk läsning) leta just den felklassen.
 
 Versionskedja:
-    <stem>.bak.json    orört Whisper-original (rörs aldrig)
-    <stem>.bak2.json   skapas HÄR: ögonblicksbild av runda 1-resultatet = runda 2:s bas
+    <stem>-bak.json    orört Whisper-original (rörs aldrig)
+    <stem>-bak2.json   skapas HÄR: ögonblicksbild av runda 1-resultatet = runda 2:s bas
     <stem>.json        alltid senaste sanningen (skrivs om av apply)
 
 Utdata är en sidecar direkt (ingen -corrections.txt, inget migrera-steg):
@@ -209,7 +209,7 @@ def main() -> int:
 
     # Basen för runda 2: ögonblicksbild av runda 1-resultatet. EN gång — rörs
     # aldrig om den finns, så ordindexen förblir giltiga över omkörningar.
-    bak2 = json_path.with_name(f"{json_path.stem}.bak2.json")
+    bak2 = json_path.with_name(f"{json_path.stem}-bak2.json")
     if not bak2.exists():
         shutil.copy2(json_path, bak2)
         bak2_msg = f"skapade {bak2.name}"

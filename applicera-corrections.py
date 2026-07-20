@@ -3,8 +3,8 @@
 Läser arbetskopian i granska/state/ (fallback: /data-fröet) och skriver den
 korrigerade datan tillbaka i <stem>.json. Rundmedveten: finns en runda 2-sidecar
 (<stem>-corrections-2.json, från granska-igen.py) används den, och källan blir
-sidecarens base_json (<stem>.bak2.json) i stället för .bak.json. Originalet
-säkerhetskopieras EN gång till <stem>.bak.json (rörs aldrig om den redan finns,
+sidecarens base_json (<stem>-bak2.json) i stället för .bak.json. Originalet
+säkerhetskopieras EN gång till <stem>-bak.json (rörs aldrig om den redan finns,
 så sanna originalet består). Regenererar också .srt och .txt.
 
 Beslut (per ord, via global_index):
@@ -99,9 +99,9 @@ def main() -> int:
     # Källan är alltid rundans ORÖRDA bas — sidecarens global_index/span/after_index
     # refererar basens ordpositioner, så apply MÅSTE tillämpas mot den. Det gör
     # körningen idempotent och korrekt även efter fler GUI-ändringar.
-    #   Runda 1: .bak.json om den finns (annars .json vid första körningen).
-    #   Runda 2+: sidecarens base_json (t.ex. .bak2.json, skriven av granska-igen.py).
-    bak = json_path.with_name(f"{json_path.stem}.bak.json")
+    #   Runda 1: -bak.json om den finns (annars .json vid första körningen).
+    #   Runda 2+: sidecarens base_json (t.ex. -bak2.json, skriven av granska-igen.py).
+    bak = json_path.with_name(f"{json_path.stem}-bak.json")
     if side.get("base_json"):
         source = json_path.with_name(side["base_json"])
         if not source.is_file():

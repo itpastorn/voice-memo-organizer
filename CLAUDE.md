@@ -151,8 +151,8 @@ direkt — inget .txt-mellansteg. Granskning i samma GUI, apply med samma skript
 Versionskedjan gör varje runda idempotent:
 
 ```
-<namn>.bak.json    orört Whisper-original (rörs aldrig)
-<namn>.bak2.json   ögonblicksbild av runda 1-resultatet = runda 2:s bas
+<namn>-bak.json    orört Whisper-original (rörs aldrig)
+<namn>-bak2.json   ögonblicksbild av runda 1-resultatet = runda 2:s bas
 <namn>.json        alltid senaste sanningen (skrivs om av apply)
 ```
 
