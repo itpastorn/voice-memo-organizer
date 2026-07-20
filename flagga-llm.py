@@ -49,7 +49,16 @@ Din uppgift: flagga ord som troligen är FELHÖRDA av transkriberaren. Leta efte
 - nonsensord och ord som inte finns (t.ex. "gik", "dik"),
 - förvanskade egennamn (t.ex. "Dunper" för "Gunther"),
 - engelska namn/låneord renderade som svenska (t.ex. "geek" felstavat),
-- riktiga svenska ord som är fel i sammanhanget (t.ex. "punkt" där det borde vara "uns").
+- riktiga svenska ord som är fel i sammanhanget (t.ex. "punkt" där det borde vara "uns"),
+- meningar som verkar SAKNA ord — särskilt negationer (inte, aldrig, ingen) som
+  vänder betydelsen, och namn i attributioner ("säger X", "enligt X" där namnet
+  fallit bort). Resultatet är flytande svenska, så läs efter logiken. Flagga ordet
+  närmast luckan, lämna gissad rättelse TOM och ange i skälet att ett ord troligen
+  saknas, och vilket,
+- avvikelser i bibelcitat: när texten citerar eller parafraserar Bibeln, jämför mot
+  Bibel 2000:s ordalydelse och flagga ord som ligger nära citatets form men är fel
+  (t.ex. "lydig inför döden" där Fil 2:8 har "ända till"). Flagga INTE talarens
+  egna medvetna parafraser.
 
 Flagga INTE ord som är korrekta, även om de är ovanliga. Ordlistan du får är facit
 över namn och begrepp som förekommer — dessa är rättstavade och ska inte flaggas,

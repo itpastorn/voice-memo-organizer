@@ -32,3 +32,51 @@ Dominionism
 # hör hemma i ett senare rättnings-/stilsteg, inte i initial_prompt. Ligger här
 # så den inte glöms bort.
 sNARlika
+
+# --- Tillägg från Torp-seminariet (issue #3) ---
+
+# Personer
+Hank Kunneman
+Lance Wallnau
+Bill Johnson
+Magnus Malm
+Mikael Tellbe
+Doug Wilson
+Pete Hegseth
+Åke Geresand
+Armand Duplantis
+
+# Personer ur CLAUDE.md:s kända felkällor
+Mike Bickle
+Sean Feucht
+William Branham
+Peter Halldorf
+Patrik Hagman
+Nadia Bolz-Weber
+James Talarico
+
+# Platser/organisationer
+Bethel Church
+Redding
+Teamevangelisation
+Equmeniakyrkan
+Stockholm Vineyard
+
+# Begrepp
+cessationism
+kontinuationist
+herraväldesteologi
+sprattelgubbe
+genombrottssmörjelse
+the breaker anointing
+
+# Internethistoria
+Usenet
+Fidonet
+Eternal September
+Netscape Navigator
+
+# Boktitlar
+# 'Andens värk' — Tellbes titel är en ordvits med ä, INTE "Andens verk".
+# Samma kapsel-problem som sNARlika: hör hemma i rättningssteget.
+Andens värk

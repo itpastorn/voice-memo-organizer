@@ -1,9 +1,11 @@
 """Steg 2: applicera granskningsbesluten på transkript-JSON:en.
 
-Läser arbetskopian granska/state/<stem>-corrections.json (fallback: /data-fröet)
-och skriver den korrigerade datan tillbaka i <stem>.json — som ditt tidigare
-försök. Originalet säkerhetskopieras EN gång till <stem>.bak.json (rörs aldrig om
-den redan finns, så sanna originalet består). Regenererar också .srt och .txt.
+Läser arbetskopian i granska/state/ (fallback: /data-fröet) och skriver den
+korrigerade datan tillbaka i <stem>.json. Rundmedveten: finns en runda 2-sidecar
+(<stem>-corrections-2.json, från granska-igen.py) används den, och källan blir
+sidecarens base_json (<stem>.bak2.json) i stället för .bak.json. Originalet
+säkerhetskopieras EN gång till <stem>.bak.json (rörs aldrig om den redan finns,
+så sanna originalet består). Regenererar också .srt och .txt.
 
 Beslut (per ord, via global_index):
     replace  -> ordet byts, probability = 1.0
@@ -73,21 +75,41 @@ def main() -> int:
         print(f"FEL: JSON saknas: {json_path}", file=sys.stderr)
         return 1
 
-    work = PROJECT_ROOT / "granska" / "state" / f"{json_path.stem}-corrections.json"
-    seed = json_path.with_name(f"{json_path.stem}-corrections.json")
-    sidecar_path = work if work.is_file() else seed
-    if not sidecar_path.is_file():
-        print(f"FEL: ingen sidecar (varken {work} eller {seed})", file=sys.stderr)
+    # Sidecarval: senaste rundan vinner. Runda 2 (-corrections-2, från
+    # granska-igen.py) om den finns, annars runda 1. Arbetskopian i granska/state/
+    # föredras framför fröet i datamappen, som tidigare.
+    state_dir = PROJECT_ROOT / "granska" / "state"
+    sidecar_path = None
+    for namn in (f"{json_path.stem}-corrections-2.json",
+                 f"{json_path.stem}-corrections.json"):
+        for kandidat in (state_dir / namn, json_path.with_name(namn)):
+            if kandidat.is_file():
+                sidecar_path = kandidat
+                break
+        if sidecar_path:
+            break
+    if sidecar_path is None:
+        print(f"FEL: ingen sidecar (varken -corrections-2.json eller "
+              f"-corrections.json i {state_dir} eller {json_path.parent})", file=sys.stderr)
         return 1
 
-    # Källan är alltid det ORÖRDA originalet: .bak.json om det finns (annars .json
-    # vid första körningen). Sidecarens global_index/span/after_index refererar
-    # originalets ordpositioner — apply MÅSTE tillämpas mot originalet. Det gör
-    # körningen idempotent och korrekt även efter fler GUI-ändringar.
-    bak = json_path.with_name(f"{json_path.stem}.bak.json")
-    source = bak if bak.exists() else json_path
-    data = json.loads(source.read_text(encoding="utf-8"))
     side = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    runda = int(side.get("runda", 1))
+
+    # Källan är alltid rundans ORÖRDA bas — sidecarens global_index/span/after_index
+    # refererar basens ordpositioner, så apply MÅSTE tillämpas mot den. Det gör
+    # körningen idempotent och korrekt även efter fler GUI-ändringar.
+    #   Runda 1: .bak.json om den finns (annars .json vid första körningen).
+    #   Runda 2+: sidecarens base_json (t.ex. .bak2.json, skriven av granska-igen.py).
+    bak = json_path.with_name(f"{json_path.stem}.bak.json")
+    if side.get("base_json"):
+        source = json_path.with_name(side["base_json"])
+        if not source.is_file():
+            print(f"FEL: sidecarens base_json saknas: {source}", file=sys.stderr)
+            return 1
+    else:
+        source = bak if bak.exists() else json_path
+    data = json.loads(source.read_text(encoding="utf-8"))
     segments = data.get("segments", [])
     flat = flatten(segments)
     n = len(flat)
@@ -180,12 +202,13 @@ def main() -> int:
         new_segments.append(seg)
 
     # Säkerhetskopiera originalet EN gång (json_path är fortfarande originalet här
-    # om .bak saknades), skriv sedan över .json.
+    # om .bak saknades), skriv sedan över .json. I runda 2+ är basen redan skriven
+    # av granska-igen.py — .bak rörs inte.
     if not bak.exists():
         shutil.copy2(json_path, bak)
         bak_msg = f"skapade {bak.name}"
     else:
-        bak_msg = f"{bak.name} = original (källa)"
+        bak_msg = f"{bak.name} orörd (original)"
 
     data["segments"] = new_segments
     data["corrections_applied_at"] = datetime.now().isoformat(timespec="seconds")
@@ -198,7 +221,8 @@ def main() -> int:
 
     # Rapport.
     left = applied.get("osaker", 0) + applied.get("pending", 0)
-    print(f"Sidecar: {sidecar_path}")
+    print(f"Sidecar: {sidecar_path}  (runda {runda})")
+    print(f"Källa:   {source.name}")
     print(f"Backup:  {bak_msg}")
     print(f"Ord:     {n} -> {len(new_flat)}")
     print(f"Tillämpat: replace {applied['replace']}, accept {applied['accept']}, "

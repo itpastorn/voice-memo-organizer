@@ -51,6 +51,10 @@ llm_max_ord = 0
 # Ord per API-anrop. Filen delas i bitar av den här storleken; varje bit får
 # globala index så inga index behöver mappas om. Små bitar = pålitligare, fler anrop.
 llm_chunk_ord = 300
+# Runda 2 (granska-igen.py): kontextgranskning av redan rättad transkription.
+# Claude Fable 5 — starkare semantisk läsning, dyrare ($10/$50 per Mtok). Körs
+# frivilligt på viktiga filer efter att runda 1 applicerats.
+runda2_modell = "claude-fable-5"
 
 [forbattring]
 # Steg c: språklig förbättring. Använder samma modell som corrections.llm_modell.

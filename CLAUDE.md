@@ -134,8 +134,32 @@ punkt=               @65.64   # uns? (fel ord i sammanhanget)
 
 Lars redigerar filen för hand: `hört=rättat` (korrigering), `hört=hört`
 (bekräftar rätt), `hört=DELETE` (tar bort ordet), eller tomt (ej granskat än —
-JSON rörs inte). Ett senare steg (ej byggt) applicerar filen på JSON:en via
-ankaret och sätter `probability = 1.0` på granskade ord.
+JSON rörs inte). Granskningen sker numera i webb-GUI:t (`granska/`, PHP i
+Docker): `migrera-corrections.py` gör .txt:en till en strukturerad sidecar,
+GUI:t skriver besluten, och `applicera-corrections.py` skriver dem in i JSON:en
+och sätter `probability = 1.0` på granskade ord.
+
+**Runda 2 (frivillig): kontextgranskning med Claude Fable.** Subtila fel
+överlever runda 1 — riktiga ord fel i sammanhanget ("få *råd* av Gud" → nåd,
+"ditt eget *innehåll*" → inre), bortfallna ord (negationer, namnattributioner;
+issue #1) och normaliserade bibelcitat som avviker från Bibel 2000 (issue #2).
+`granska-igen.py` läser den **rättade** JSON:en (kräver `corrections_applied_at`),
+skickar den till `claude-fable-5` (`corrections.runda2_modell`) med prompt riktat
+mot de tre felklasserna, och skriver sidecaren `<namn>-corrections-2.json`
+direkt — inget .txt-mellansteg. Granskning i samma GUI, apply med samma skript.
+
+Versionskedjan gör varje runda idempotent:
+
+```
+<namn>.bak.json    orört Whisper-original (rörs aldrig)
+<namn>.bak2.json   ögonblicksbild av runda 1-resultatet = runda 2:s bas
+<namn>.json        alltid senaste sanningen (skrivs om av apply)
+```
+
+Sidecaren bär `"runda"` och `"base_json"`; apply läser basen därifrån —
+`global_index` refererar alltid basens ordpositioner. Bortfallsflaggor får tom
+`ai_guess` (GUI:ts förslag-knapp ersätter ord, vilket vore fel) och förslaget i
+skälet; Lars infogar med `i`/`Shift+i`.
 
 Egennamn är den stora felkällan: Wimber, Bolz-Weber, Talarico, Bickle, Feucht,
 Branham, Halldorf, Hagman. **`ordlista.txt`** i projektroten samlar dem och föder
@@ -170,6 +194,15 @@ Producerar två nya filer med egna namn (originalen bevaras):
 - **`*.md`** — markdown med underrubriker och listor där innehållet motiverar det.
   Tidsangivelser sätts ut per **block**, inte per mening, som `[00:04:12]` före
   varje avsnitt. Ett block ska gå att slå upp i ljudfilen.
+
+**Negationsvakt (`negationsvakt.py`, issue #4).** Steg c:s risk är att städningen
+gör tappade negationer osynliga — flytande text ser rätt ut, och en LLM som
+granskar sitt eget utflöde ger falsk trygghet. Efter steg c körs därför en
+deterministisk kontroll utan API-anrop: negationsorden (*inte, aldrig, ingen,
+inget, inga, utan, icke*) räknas per block i `.md`:n respektive i JSON-segmenten
+i samma tidsfönster; avvikelse ger en tidsstämplad rad och exit-kod 1. Falska
+positiva är acceptabla — varje polaritetsändring ska kräva ett medvetet mänskligt
+beslut.
 
 ### d. QDA-taggning
 

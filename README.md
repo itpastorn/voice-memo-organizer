@@ -16,7 +16,9 @@ härledda filer bredvid ljudet.
 | **b** | Flaggning av felhörningar (LLM) → `-corrections.txt` | ✅ |
 | — | Granska-GUI (webb): migrera → rätta → applicera | ✅ |
 | **2** | Apply: skriv besluten till JSON, sätt `probability=1.0` | ✅ |
-| **c** | Språklig förbättring → `-korrigerad.srt` + `.md` | ⬜ |
+| — | Runda 2 (frivillig): kontextgranskning med Claude Fable → GUI → apply | ✅ |
+| **c** | Språklig förbättring → `.md` + `-borttaget.txt` | ✅ prototyp |
+| — | Negationsvakt: deterministisk kontroll av steg c-utdatan | ✅ |
 | **d** | QDA-taggning (kodbok, blocknivå) | ⬜ |
 | **e** | SQLite-index (FTS5) för sökning | ⬜ |
 
@@ -127,8 +129,47 @@ När granskningen är klar skrivs besluten in i JSON:en:
 
 Säkerhetskopierar `<namn>.json` → `<namn>.bak.json` (en gång), skriver den
 korrigerade datan i `.json`, sätter `probability=1.0` på granskade ord, och
-regenererar `.srt`/`.txt`. Läser alltid det orörda originalet (`.bak`) som källa —
-**idempotent**: kör om utan skada. Osäkra och ogranskade ord lämnas orörda.
+regenererar `.srt`/`.txt`. Läser alltid rundans orörda bas som källa (runda 1:
+`.bak.json`; runda 2: sidecarens `base_json` → `.bak2.json`) — **idempotent**:
+kör om utan skada. Osäkra och ogranskade ord lämnas orörda. Finns en runda
+2-sidecar (`-corrections-2.json`) appliceras den; annars runda 1.
+
+## Runda 2 — kontextgranskning med Claude Fable (frivillig)
+
+Subtila fel överlever runda 1: riktiga ord fel i sammanhanget ("få *råd* av
+Gud" → nåd), bortfallna negationer/namn, normaliserade bibelcitat. Efter apply
+kan den rättade JSON:en granskas en gång till av Claude Fable 5 (dyrare,
+starkare semantisk läsning — modell i `corrections.runda2_modell`):
+
+```powershell
+./venv/Scripts/python.exe granska-igen.py
+```
+
+Skapar `<namn>.bak2.json` (runda 2:s bas, en gång) och skriver sidecaren
+`<namn>-corrections-2.json` direkt — inget migrera-steg. `granska/current.json`
+pekas om, så samma GUI används för granskningen; därefter samma
+`applicera-corrections.py`. Bortfallsflaggor (märkta BORTFALL i skälet) rättas
+med GUI:ts infoga-tangenter `i`/`Shift+i`.
+
+Misslyckas bitar (t.ex. slut på API-krediter mitt i) noteras de i sidecaren
+(`misslyckade_bitar`) och skriptet avslutar med varning + exit-kod 1. Åtgärda
+orsaken och kör `granska-igen.py --fortsatt` — bara resterna granskas, och
+befintliga flaggor och GUI-beslut behålls. `--max=N` finns för billig testning.
+
+## Steg c — språklig förbättring + negationsvakt
+
+```powershell
+./venv/Scripts/python.exe forbattra.py       # -> <namn>.md + <namn>-borttaget.txt
+./venv/Scripts/python.exe negationsvakt.py   # deterministisk vakt, inga API-anrop
+```
+
+`forbattra.py` städar språket utan att skriva om Lars och föreslår radering av
+icke-innehåll (samlas i `-borttaget.txt`). `negationsvakt.py` räknar
+negationsord (*inte, aldrig, ingen, inget, inga, utan, icke*) per block i
+`.md`:n mot JSON-segmenten i samma tidsfönster — en tappad negation är den mest
+extrema omskrivning som finns, och flytande text döljer den. Avvikelse ⇒
+tidsstämplad rad + exit-kod 1. Falska positiva är OK; varje polaritetsändring
+ska vara ett medvetet beslut.
 
 ## Portabilitet (laptop → arbetsstation)
 
