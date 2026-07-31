@@ -108,3 +108,36 @@ Manifest Destiny        # (manifestet Destiny)
 Sjubergsmandatet
 trumpism                # (Champismen) — modellen gissade fel: "karismatiken"
 kristen nationalism
+
+# --- Skapelse/evolution/apologetik (genomkörning 2026-07-31) ---
+#
+# Whisper fick ALDRIG "ungjordskreationism" rätt i zego-ungjordskreationismens-logner:
+# fyra olika förvanskningar (ungdjurs, ungdomsgreanismen, ungdomsreaktionisterna,
+# ungdoms kreationist). Just den sortens ord är kandidat nummer ett för
+# initial_prompt i steg a — billigt att mata in, dyrt att rätta i efterhand.
+
+# Personer
+Duane T. Gish           # (Dwayne Guy Gitch) — mellaninitialen missades av LLM:n
+Ken Ham
+Henry Morris
+Mary Schweitzer         # (Mary Schwizer) — paleontologen bakom mjukvävnadsfyndet
+Prokopius
+
+# Begrepp
+ungjordskreationism     # (ungdjurs, ungdomsgreanismen, ungdomsreaktionisterna)
+ungjordskreationist
+Gish gallop             # (Guy Gallup)
+uniformism
+uniformitarianism
+varvade lager           # (varmade lager)
+varvade sediment
+isborrkärnor            # ('isborr. Kärnor' — Whisper delade sammansättningen
+iskärnor
+radiometrisk datering
+mjuk vävnad i dinosaurieben
+falsifiera              # (valsiverats)
+
+# Platser
+Krakatoa                # (Kvackatoan)
+Grönlandsisen
+Antarktis
