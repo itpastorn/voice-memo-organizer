@@ -222,11 +222,15 @@ def main() -> int:
     # Pekare + Docker-miljö åt granska/-GUI:t.
     granska = PROJECT_ROOT / "granska"
     granska.mkdir(exist_ok=True)
+    # Sökvägarna är relativa datamappens rot — ljudet ligger i temamappar och
+    # GUI:t monterar roten som /data. Arbetskopian i state/ hålls däremot platt
+    # (PHP tar basename), precis som applicera-corrections.py förutsätter.
+    audio_path = json_path.with_name(sidecar["audio_file"])
     (granska / "current.json").write_text(json.dumps({
         "stem": json_path.stem,
-        "transcript_json": json_path.name,
-        "sidecar_json": sidecar_path.name,
-        "audio_file": sidecar["audio_file"],
+        "transcript_json": k.rel_to_root(cfg, json_path),
+        "sidecar_json": k.rel_to_root(cfg, sidecar_path),
+        "audio_file": k.rel_to_root(cfg, audio_path),
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     (granska / ".env").write_text(f"DATA_ROOT={cfg['data']['root']}\n", encoding="utf-8")
 

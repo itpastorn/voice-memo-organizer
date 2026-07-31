@@ -21,7 +21,7 @@ function bail(int $code, string $msg): void {
 $here = __DIR__;
 $cur = json_decode(@file_get_contents($here . '/current.json'), true);
 if (!$cur) bail(500, 'current.json saknas');
-$path = $here . '/state/' . $cur['sidecar_json'];
+$path = $here . '/state/' . basename($cur['sidecar_json']);   // state/ är platt
 if (!is_file($path)) bail(500, 'arbetskopia saknas — ladda om läsvyn först');
 
 $in = json_decode(file_get_contents('php://input'), true);

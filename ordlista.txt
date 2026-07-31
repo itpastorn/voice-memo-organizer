@@ -80,3 +80,31 @@ Netscape Navigator
 # 'Andens värk' — Tellbes titel är en ordvits med ä, INTE "Andens verk".
 # Samma kapsel-problem som sNARlika: hör hemma i rättningssteget.
 Andens värk
+
+# --- Tillägg från zego-tpusa-och-nar (genomkörning 2026-07-31) ---
+#
+# Alla nedan förvanskades eller var i riskzonen i den filen. Observerade
+# förvanskningar inom parentes.
+
+# Personer
+Charlie Kirk
+Shawn Bolz              # (Bolts, Boltz) OBS: en annan person än Nadia Bolz-Weber
+Kris Vallotton          # (Chris Wallotton)
+Abraham Kuyper          # (Kuiper)
+Loren Cunningham        # (Lauren Cunningham) — YWAM:s grundare
+Kim Clement             # (Kim Clemet)
+Jonathan Edwards        # (Jonas Edwards)
+C. Peter Wagner
+
+# Organisationer och program
+Turning Point USA       # (Turnpoint, Turn Point)
+Turning Point USA Faith # (Turning Point USAF)
+Flashpoint              # (Flashboilt, Flashbolt) — TV-programmet
+Wagner University
+MAGA-rörelsen           # (Magarörelsen)
+
+# Begrepp
+Manifest Destiny        # (manifestet Destiny)
+Sjubergsmandatet
+trumpism                # (Champismen) — modellen gissade fel: "karismatiken"
+kristen nationalism

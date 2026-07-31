@@ -29,7 +29,10 @@ if (!is_file($tjPath)) fail("Transkript saknas i /data: {$cur['transcript_json']
 // Arbetskopian: fröas från /data-sidecaren första gången, redigeras sedan här.
 $stateDir = $here . '/state';
 if (!is_dir($stateDir)) @mkdir($stateDir, 0777, true);
-$workPath = $stateDir . '/' . $cur['sidecar_json'];
+// Fröet ligger i /data på sin relativa sökväg (ljudet bor i temamappar), men
+// arbetskopian hålls platt i state/ — så applicera-corrections.py hittar den på
+// <stem>-corrections.json oavsett vilken temamapp memot kommer från.
+$workPath = $stateDir . '/' . basename($cur['sidecar_json']);
 $seedPath = $dataDir . '/' . $cur['sidecar_json'];
 if (!is_file($workPath)) {
     if (!is_file($seedPath)) fail("Sidecar saknas i /data: {$cur['sidecar_json']}");

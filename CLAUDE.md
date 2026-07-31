@@ -87,7 +87,8 @@ allt vi **producerar**.
 
 ## Pipeline
 
-Fem steg. Varje steg är idempotent och kan köras om isolerat.
+Fem steg (a–e) plus ett löpande (f). Varje steg är idempotent och kan köras om
+isolerat.
 
 ### a. Transkribering
 
@@ -99,6 +100,8 @@ int8 på CPU.
 - Producerar tre filer per ljudklipp: `.json` (fullt Whisper-utdata med
   ord-nivå-tidsstämplar), `.srt`, `.txt`.
 - JSON:en är sanningskällan. Allt nedströms härleds ur den.
+- Direkt efter transkriberingen körs steg **f** en första gång och sätter
+  preliminära metadatataggar på ljudfilen.
 
 ### b. Flaggning av oklarheter
 
@@ -229,6 +232,55 @@ berör en viss QDA-kod.
 
 Gränssnittet väntar. Det blir troligen en lokal webbserver i PHP.
 
+### f. Metadatataggning av ljudfilerna (löper parallellt)
+
+Ljudfilen ska bära sitt eget innehåll. En memofil som hamnar i en mediaspelare,
+på telefonen eller i en filhanterare ska visa vad den handlar om utan att någon
+öppnar en `.md`. Taggarna är ett **derivat** — de ska kunna sättas om från
+grunden ur `.json` + `.md` + kodboken.
+
+**Inte ID3.** 351 av 354 ljudfiler är `.m4a`, som saknar ID3 och i stället bär
+MP4/iTunes-atomer (`©nam`, `©ART`, `©alb`, `©cmt`, `©gen`, `©grp`). Två `.mp3`
+och en `.aac` tar äkta ID3. `mutagen` hanterar båda bakom samma API, så koden
+skiljer på formaten på ett ställe och inte i övrigt.
+
+**Tre tidpunkter.** Samma skript, körs om idempotent; senare körningar skriver
+över tidigare värden i de fält som fått nytt underlag.
+
+| När | Underlag | Vad som sätts |
+| --- | --- | --- |
+| efter **a** | filnamn + JSON | preliminär titel, artist, album, datum, längd |
+| efter **c** | `.md` | riktig titel ur rubriken, sammanfattning i kommentaren |
+| efter **d** | kodboken | QDA-koder som genre/grupp |
+
+**Fälten:**
+
+- **Titel** — `.md`-rubriken när den finns, annars ljudfilens namn. Preliminära
+  titlar ska gå att känna igen som preliminära.
+- **Artist** — `Lars Gunther`.
+- **Album** — temamappens namn (`NAR-profetrorelsen`, `trump-politik`, ...). Gör
+  att mediaspelare grupperar memona per tema utan extra arbete. Memon i inkorgen
+  får ingen album-tagg förrän de sorterats.
+- **Datum** — inspelningsdatum ur den befintliga `creation_time` (Samsungs
+  inspelningsapp sätter den). **Skriv aldrig över den med körningsdatum** — den
+  är det enda spåret av när memot faktiskt spelades in.
+- **Längd** — ur JSON:ens `duration`.
+- **Kommentar** — kort sammanfattning ur steg c. Gör innehållet sökbart i
+  filhanterare och mediabibliotek.
+- **Genre/grupp** — steg d:s QDA-koder. Väntar på att kodboken beslutas; fältet
+  lämnas tomt tills dess i stället för att fyllas med något provisoriskt.
+
+**Originalljudet och taggarna.** Att skriva taggar innebär att containern
+skrivs om — därför gäller följande, och inget mindre:
+
+- Ljudströmmen kopieras **bit för bit**; ingen omkodning, aldrig.
+- Skrivning sker till tempfil följt av atomiskt byte. Ett avbrott mitt i får
+  aldrig lämna en trasig eller halvskriven ljudfil.
+- Efter skrivning **verifieras** att ljudströmmen är oförändrad (hash av
+  strömmen, inte av filen — containern har ju ändrats). Avviker den, återställs
+  tempbytet och körningen avbryts med fel.
+- Samsungs befintliga taggar (`creation_time`, `com.android.*`) bevaras.
+
 ## Framtid — utanför scope nu
 
 RAG-databas ovanpå indexet, för att kunna ställa frågorna i naturligt språk i
@@ -299,7 +351,7 @@ transkriptioner är grannar.
 
 ```
 transkribera/NAR-profetrorelsen/
-    zego-bill-johnson-fallen.m4a            ← original, orört
+    zego-bill-johnson-fallen.m4a            ← original; ljudet orört, taggar ur f.
     zego-bill-johnson-fallen.json           ← a. Whisper, sanningskällan
     zego-bill-johnson-fallen.srt            ← a.
     zego-bill-johnson-fallen.txt            ← a.
@@ -315,8 +367,11 @@ Skriptet självt, kodboken och databasen bor i detta projekt
 
 - **Svenska.** Lars arbetar på svenska. Kod och kommentarer likaså, om inget annat
   sägs.
-- **Rör aldrig originalljudet.** Ingen omdöpning, ingen konvertering på plats,
-  ingen radering. Allt annat är återskapbart; ljudet är det inte.
+- **Rör aldrig originalljudet.** Regeln gäller ljud*innehållet*: ingen omdöpning,
+  ingen omkodning, ingen radering. Allt annat är återskapbart; ljudet är det inte.
+  **Enda undantaget är metadatataggar (steg f)** — ljudströmmen kopieras då bit
+  för bit, skrivningen sker via tempfil + atomiskt byte, och strömmen verifieras
+  oförändrad efteråt. Ingen annan skrivning i ljudfilen är tillåten.
 - **`test/` och `sammanfatta/` är utanför projektet.**
 - Whisper-JSON:en är sanningskällan. Bygg allt annat som derivat, och se till att
   det går att bygga om.

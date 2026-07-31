@@ -305,11 +305,13 @@ def main() -> int:
     # till, stabil även efter att runda 2 applicerats), sidecar = runda 2-filen.
     granska = PROJECT_ROOT / "granska"
     granska.mkdir(exist_ok=True)
+    # Sökvägar relativa datamappens rot (temamappar; GUI:t monterar roten som /data).
+    audio_path = json_path.with_name(sidecar["audio_file"])
     (granska / "current.json").write_text(json.dumps({
         "stem": json_path.stem,
-        "transcript_json": bak2.name,
-        "sidecar_json": sidecar_path.name,
-        "audio_file": sidecar["audio_file"],
+        "transcript_json": k.rel_to_root(cfg, bak2),
+        "sidecar_json": k.rel_to_root(cfg, sidecar_path),
+        "audio_file": k.rel_to_root(cfg, audio_path),
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     env_path = granska / ".env"
     if not env_path.is_file():

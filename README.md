@@ -21,6 +21,7 @@ härledda filer bredvid ljudet.
 | — | Negationsvakt: deterministisk kontroll av steg c-utdatan | ✅ |
 | **d** | QDA-taggning (kodbok, blocknivå) | ⬜ |
 | **e** | SQLite-index (FTS5) för sökning | ⬜ |
+| **f** | Metadatataggar på ljudfilerna (efter a, c och d) | ⬜ |
 
 ## Modellen: KBLab kb-whisper via faster-whisper
 

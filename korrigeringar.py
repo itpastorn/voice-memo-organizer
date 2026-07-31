@@ -53,16 +53,28 @@ def json_path_for(cfg: dict) -> Path:
     return audio_root / test_file.parent / f"{stem}.json"
 
 
+def rel_to_root(cfg: dict, path: Path) -> str:
+    """Sökväg relativt datamappens rot, med snedstreck — formatet granska/current.json
+    använder. Ljudet ligger i temamappar (NAR-profetrorelsen/...), och GUI:t monterar
+    roten som /data; bara filnamnet räcker alltså inte. Filer direkt i roten ger
+    enbart filnamnet."""
+    rel = path.resolve().relative_to(Path(cfg["data"]["root"]).resolve())
+    return rel.as_posix()
+
+
 def load_ordlista() -> list[str]:
-    """Egennamn och begrepp ur ordlista.txt. Rader som börjar med # hoppas över.
+    """Egennamn och begrepp ur ordlista.txt. Rader som börjar med # hoppas över,
+    och en '#'-kommentar sist på en rad skalas bort — listan dokumenterar ofta
+    observerade förvanskningar ('Shawn Bolz  # (Bolts, Boltz)'), men LLM:n ska
+    bara få den rättstavade termen som facit.
     Tom lista om filen saknas — ordlistan är hjälp, inte krav."""
     path = PROJECT_ROOT / "ordlista.txt"
     if not path.is_file():
         return []
     termer = []
     for rad in path.read_text(encoding="utf-8").splitlines():
-        rad = rad.strip()
-        if rad and not rad.startswith("#"):
+        rad = rad.split("#", 1)[0].strip()
+        if rad:
             termer.append(rad)
     return termer
 
