@@ -28,10 +28,17 @@ NEGATIONER = {"inte", "aldrig", "ingen", "inget", "inga", "utan", "icke"}
 
 TS_RE = re.compile(r"^\*\*\[(\d{2}):(\d{2}):(\d{2})\]\*\*\s*$")
 ORD_RE = re.compile(r"[a-zåäöé]+", re.IGNORECASE)
+RUBRIK_RE = re.compile(r"^\s*#{1,6}\s")
 
 
 def rakna(text: str) -> int:
-    return sum(1 for w in ORD_RE.findall(text.lower()) if w in NEGATIONER)
+    """Negationsord i texten. Rubrikrader (## ...) räknas INTE: de är steg c:s
+    egna formuleringar, inte Lars ord, så de har ingen motsvarighet i källan.
+    Dessutom skriver forbattra.py rubriken FÖRE nästa blocks tidsstämpel, så en
+    rubrik hamnar i föregående block och skulle ge falskt utslag där."""
+    rader = [r for r in text.splitlines() if not RUBRIK_RE.match(r)]
+    ord_ = ORD_RE.findall("\n".join(rader).lower())
+    return sum(1 for w in ord_ if w in NEGATIONER)
 
 
 def md_block(md_text: str) -> list[tuple[float, str]]:

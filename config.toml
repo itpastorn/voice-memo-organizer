@@ -5,7 +5,7 @@
 # Rot för allt ljud (inkorgen + temamappar). Ligger utanför projektet.
 root = "C:/Users/gunther/Dropbox/arkiv/mediadev/transkribera"
 # Steg 1: en enda hårdkodad testfil, relativt root. Byts för hand.
-test_file = "NAR-profetrorelsen/zego-tpusa-och-nar.m4a"
+test_file = "god-karismatik-egna-boken/zego-Andens-gavor-inte-konstant-formaga.m4a"
 
 [model]
 # Modellstorlek är konfiguration, inte konstant. medium nu, large när VRAM finns.
