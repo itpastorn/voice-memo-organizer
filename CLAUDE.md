@@ -208,6 +208,22 @@ Docker): `migrera-corrections.py` gör .txt:en till en strukturerad sidecar,
 GUI:t skriver besluten, och `applicera-corrections.py` skriver dem in i JSON:en
 och sätter `probability = 1.0` på granskade ord.
 
+**Filväljaren (`granska/valj.php`) är GUI:ts ingång.** Den listar alla
+transkriptioner i datamappen, senaste först (`generated_at`, annars filens
+ändringstid för äldre försök), med filter på temamapp och filnamn. Kom till när
+batchtranskribering gjorde en fil per `current.json` ohållbart.
+
+Två följdbeslut som är lätta att missa:
+
+- **Filer utan sidecar listas och går att öppna.** GUI:t skapar en tom
+  arbetskopia; typ 3 (klicka valfritt ord) räcker för att rätta. Alternativet —
+  att bara visa förberedda filer — hade gjort nytranskriberat material osynligt
+  tills två Python-steg körts.
+- **`applicera-corrections.py` läser `granska/current.json`** och faller tillbaka
+  på `config.toml`. Utan det blir väljaren en fälla: man granskar fil X och
+  applicerar fil Y. Rapporten skriver ut vilken fil som träffades och varifrån
+  valet kom.
+
 **Runda 2 (frivillig): kontextgranskning med Claude Fable.** Subtila fel
 överlever runda 1 — riktiga ord fel i sammanhanget ("få *råd* av Gud" → nåd,
 "ditt eget *innehåll*" → inre), bortfallna ord (negationer, namnattributioner;

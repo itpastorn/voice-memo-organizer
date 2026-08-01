@@ -127,12 +127,24 @@ Ett webbgränssnitt för att rätta felhörningarna snabbt — ett ord i taget m
 kontext, tangentbord först, och loopad ljuduppspelning runt varje problem.
 
 ```powershell
-# 1. Migrera corrections-txt -> strukturerad sidecar + GUI-pekare + .env:
+# 1. Migrera corrections-txt -> strukturerad sidecar (+ .env första gången):
 ./venv/Scripts/python.exe migrera-corrections.py
 
 # 2. Starta GUI:t (från granska/):
 cd granska; docker compose up      # öppna http://localhost:8137
 ```
+
+**Filväljaren är ingången.** `valj.php` listar **alla** transkriptioner i datamappen,
+senaste överst, med filter på temamapp och filnamn. Statuskolumnen visar var varje
+fil står: `ej flaggad` · `X flaggor, Y kvar` · `applicerad` · `runda 2`.
+
+Steg 1 ovan behövs bara för filer du vill ha AI-flaggade. **Filer utan sidecar går
+att öppna ändå** — de får en tom arbetskopia, och du rättar genom att klicka valfritt
+ord i texten. Saknas ljudfilen (gäller äldre transkript) märks ljudpanelen ut och
+resten fungerar som vanligt.
+
+Valet skrivs till `granska/current.json`, och `applicera-corrections.py` följer det —
+annars vore väljaren en fälla: granska fil X, applicera fil Y.
 
 Källan (`/data`) monteras i **läsläge**; GUI:t skriver en arbetskopia av besluten i
 `granska/state/`. Rätta i webbläsaren:

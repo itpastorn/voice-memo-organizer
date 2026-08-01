@@ -18,10 +18,11 @@ function fail(string $msg): void {
     exit;
 }
 
+// Ingen fil vald än -> till väljaren i stället för ett felmeddelande.
 $curFile = $here . '/current.json';
-if (!is_file($curFile)) fail("granska/current.json saknas.");
+if (!is_file($curFile)) { header('Location: valj.php'); exit; }
 $cur = json_decode(file_get_contents($curFile), true);
-if (!$cur) fail("granska/current.json går inte att läsa.");
+if (!$cur) { header('Location: valj.php'); exit; }
 
 $tjPath = $dataDir . '/' . $cur['transcript_json'];
 if (!is_file($tjPath)) fail("Transkript saknas i /data: {$cur['transcript_json']}");
@@ -35,13 +36,30 @@ if (!is_dir($stateDir)) @mkdir($stateDir, 0777, true);
 $workPath = $stateDir . '/' . basename($cur['sidecar_json']);
 $seedPath = $dataDir . '/' . $cur['sidecar_json'];
 if (!is_file($workPath)) {
-    if (!is_file($seedPath)) fail("Sidecar saknas i /data: {$cur['sidecar_json']}");
-    if (!@copy($seedPath, $workPath)) fail("Kunde inte skapa arbetskopia i state/ (skrivrättigheter?).");
+    if (is_file($seedPath)) {
+        if (!@copy($seedPath, $workPath)) fail("Kunde inte skapa arbetskopia i state/ (skrivrättigheter?).");
+    } else {
+        // Ingen sidecar: filen har inte flaggats av steg b, eller detektorn hittade
+        // inget. Det är inget fel — en tom arbetskopia räcker för att granska, och
+        // typ 3 (klicka valfritt ord) fungerar som vanligt.
+        $tom = ['flags' => [], 'phrase_edits' => [], 'insertions' => [], 'review' => [],
+                'source' => 'granska/index.php (tom — ingen flaggning fanns)'];
+        if (@file_put_contents($workPath, json_encode($tom, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) === false) {
+            fail("Kunde inte skapa tom arbetskopia i state/ (skrivrättigheter?).");
+        }
+    }
 }
 
 $data = json_decode(file_get_contents($tjPath), true);
 $side = json_decode(file_get_contents($workPath), true);
 if (!$data || !$side) fail("JSON går inte att tolka.");
+$side['flags'] = $side['flags'] ?? [];
+
+// Ljudfilen kan saknas (äldre transkript bär ingen audio_file, och gissningen kan
+// slå fel). Granskningen ska fungera ändå — text går att rätta utan ljud.
+$harLjud = is_file($dataDir . '/' . ($cur['audio_file'] ?? ''));
+$temamapp = dirname($cur['transcript_json']);
+$temamapp = ($temamapp === '.' || $temamapp === '') ? '(inkorgen)' : $temamapp;
 
 // Platta ut orden EXAKT som korrigeringar.flatten_words (samma globala index).
 $words = [];
@@ -157,12 +175,17 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   .rev li:first-child { border-top:0; }
   .rev .ln { color:var(--muted); font-variant-numeric:tabular-nums; }
   code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.85em; background:#0000000a; padding:0 3px; border-radius:3px; }
+  a.tillbaka { color:var(--acc); text-decoration:none; font-weight:600; white-space:nowrap; }
+  a.tillbaka:hover { text-decoration:underline; }
+  .var { color:var(--muted); font-size:13px; }
   @media (max-width:900px){ .layout{grid-template-columns:1fr} aside{position:static;height:auto;border-left:0;border-top:1px solid var(--line)} }
 </style>
 </head>
 <body>
 <header>
-  <h1>Granska: <?= htmlspecialchars($cur['stem']) ?></h1>
+  <a class="tillbaka" href="valj.php">&#9664; Alla filer</a>
+  <h1><?= htmlspecialchars($cur['stem']) ?></h1>
+  <span class="var"><?= htmlspecialchars($temamapp) ?></span>
   <span id="counts">
     <b id="c-tot"><?= count($side['flags']) ?></b> flaggor ·
     beslutade <b id="c-done"><?= $decided ?></b> ·
@@ -202,12 +225,17 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
 
   <div class="panel" id="audioPanel">
     <h2>Ljud</h2>
+    <?php if ($harLjud): ?>
     <div class="actions">
       <button id="btnPlay">▶ Loop <kbd>Space</kbd></button>
       <button id="btnNarrow">−5s <kbd>[</kbd></button>
       <button id="btnWiden">+5s <kbd>]</kbd></button>
     </div>
     <p class="hint" id="audioStatus">±5s runt ordet · fokusera ett ord och tryck Space</p>
+    <?php else: ?>
+    <p class="hint">Ljudfilen hittades inte:<br><code><?= htmlspecialchars($cur['audio_file'] ?? '—') ?></code><br>
+      Granskningen fungerar ändå — men utan ljud går bara texten att bedöma.</p>
+    <?php endif; ?>
   </div>
 
   <div class="panel">
@@ -596,9 +624,11 @@ function updateAudioUI(){
 }
 player.addEventListener('timeupdate', () => { if(looping && player.currentTime>=loopEnd) player.currentTime=loopStart; });
 player.addEventListener('ended', () => { if(looping){ player.currentTime=loopStart; player.play().catch(()=>{}); } });
-document.getElementById('btnPlay').addEventListener('click', toggleLoop);
-document.getElementById('btnNarrow').addEventListener('click', () => adjustPad(-5));
-document.getElementById('btnWiden').addEventListener('click', () => adjustPad(5));
+// Knapparna saknas när ljudfilen inte hittades — utan ?. kastas ett fel här och
+// resten av initieringen nedan körs aldrig.
+document.getElementById('btnPlay')?.addEventListener('click', toggleLoop);
+document.getElementById('btnNarrow')?.addEventListener('click', () => adjustPad(-5));
+document.getElementById('btnWiden')?.addEventListener('click', () => adjustPad(5));
 
 rebuildOsakerList();   // fyll listorna vid start
 markPhrases();
