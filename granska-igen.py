@@ -199,7 +199,8 @@ def main() -> int:
     ccfg = cfg["corrections"]
     chunk = int(ccfg["llm_chunk_ord"])
     model = ccfg["runda2_modell"]
-    ordlista = k.load_ordlista()
+    tema = k.temamapp_for(cfg, json_path)          # se flagga-llm.py
+    ordlista = k.load_ordlista(tema, allt=tema is None)
 
     # CLI-override för billig testning (som forbattra.py): --max=N ord ur början.
     limit = len(words)

@@ -1,0 +1,32 @@
+# Skapelse, evolution, vetenskap och apologetik.
+#
+# Whisper fick ALDRIG "ungjordskreationism" rätt i zego-ungjordskreationismens-logner:
+# fyra olika förvanskningar i samma fil. Just den sortens ämnesord är hela skälet
+# till att initial_prompt finns — billigt att mata in, dyrt att rätta i efterhand.
+
+# Personer
+Duane T. Gish           # (Dwayne Guy Gitch) — mellaninitialen missades av LLM:n
+Ken Ham
+Henry Morris
+Mary Schweitzer         # (Mary Schwizer) — paleontologen bakom mjukvävnadsfyndet
+Prokopius
+
+# Begrepp
+ungjordskreationism     # (ungdjurs, ungdomsgreanismen, ungdomsreaktionisterna)
+ungjordskreationist
+Gish gallop             # (Guy Gallup)
+uniformism
+uniformitarianism
+varvade lager           # (varmade lager)
+varvade sediment
+isborrkärnor            # ('isborr. Kärnor' — Whisper delade sammansättningen)
+iskärnor
+radiometrisk datering
+mjuk vävnad i dinosaurieben
+falsifiera              # (valsiverats)
+syndafloden             # (Sydafloden)
+
+# Platser
+Krakatoa                # (Kvackatoan)
+Grönlandsisen
+Antarktis

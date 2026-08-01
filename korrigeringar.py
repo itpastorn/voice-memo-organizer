@@ -62,21 +62,141 @@ def rel_to_root(cfg: dict, path: Path) -> str:
     return rel.as_posix()
 
 
-def load_ordlista() -> list[str]:
-    """Egennamn och begrepp ur ordlista.txt. Rader som börjar med # hoppas över,
-    och en '#'-kommentar sist på en rad skalas bort — listan dokumenterar ofta
-    observerade förvanskningar ('Shawn Bolz  # (Bolts, Boltz)'), men LLM:n ska
-    bara få den rättstavade termen som facit.
-    Tom lista om filen saknas — ordlistan är hjälp, inte krav."""
-    path = PROJECT_ROOT / "ordlista.txt"
+ORDLISTA_DIR = PROJECT_ROOT / "ordlista"
+
+
+def temamapp_for(cfg: dict, path: Path) -> str | None:
+    """Temamappens namn för en fil under datamappens rot, eller None för filer
+    som ligger direkt i roten (inkorgen — temat är ännu okänt). Bara den första
+    nivån räknas; djupare undermappar tillhör sin temamapp."""
+    try:
+        rel = Path(path).resolve().relative_to(Path(cfg["data"]["root"]).resolve())
+    except ValueError:
+        return None
+    return rel.parts[0] if len(rel.parts) > 1 else None
+
+
+def _las_termfil(path: Path) -> list[str]:
+    """Termer ur en ordlistefil. Rader som börjar med # hoppas över, och en
+    '#'-kommentar sist på en rad skalas bort — filerna dokumenterar observerade
+    förvanskningar ('Shawn Bolz  # (Bolts, Boltz)'), men bara den rättstavade
+    termen ska vidare."""
     if not path.is_file():
         return []
-    termer = []
-    for rad in path.read_text(encoding="utf-8").splitlines():
-        rad = rad.split("#", 1)[0].strip()
-        if rad:
-            termer.append(rad)
+    return [r for r in (rad.split("#", 1)[0].strip()
+                        for rad in path.read_text(encoding="utf-8").splitlines()) if r]
+
+
+def load_ordlista(tema: str | None = None, *, allt: bool = False,
+                  bas: str = "gemensam") -> list[str]:
+    """Ordlista: den gemensamma basen först, sedan temamappens egen fil.
+
+    tema=None ger bara basen (t.ex. en fil i inkorgen). allt=True läser alla
+    mappfiler — meningsfullt för LLM-detektorn i steg b, som saknar längdgräns
+    och hellre ser för mycket än för lite när temat är okänt.
+
+    Dubbletter tas bort men ordningen behålls: basen ligger först, så budget-
+    vakten i initial_prompt() kapar mappens termer och aldrig basens.
+    """
+    filer = [ORDLISTA_DIR / f"{bas}.txt"]
+    if allt:
+        filer += sorted(p for p in ORDLISTA_DIR.glob("*.txt") if p.stem != bas)
+    elif tema:
+        filer.append(ORDLISTA_DIR / f"{tema}.txt")
+
+    termer: list[str] = []
+    sedda: set[str] = set()
+    for f in filer:
+        for t in _las_termfil(f):
+            if t not in sedda:
+                sedda.add(t)
+                termer.append(t)
     return termer
+
+
+# --------------------------------------------------------------------------- #
+# initial_prompt till Whisper (steg a)
+# --------------------------------------------------------------------------- #
+
+def _whisper_tokenizer():
+    """Modellens EGEN tokenizer ur models/, om den finns. Teckenuppskattning
+    slår fel med ~10 % (mätt 442 mot verkliga 484 tokens), och taket är hårt —
+    därför exakt räkning när det går."""
+    try:
+        from tokenizers import Tokenizer
+    except ImportError:
+        return None
+    for p in (PROJECT_ROOT / "models").rglob("tokenizer.json"):
+        try:
+            return Tokenizer.from_file(str(p))
+        except Exception:
+            continue
+    return None
+
+
+def rakna_tokens(text: str) -> tuple[int, bool]:
+    """(antal tokens, exakt). Faller tillbaka på ~3,3 tecken/token när modellen
+    inte är nedladdad — anropare bör varna när exakt=False."""
+    tok = _whisper_tokenizer()
+    if tok is None:
+        return round(len(text) / 3.3), False
+    return len(tok.encode(text).ids), True
+
+
+def bygg_ordlista_prompt(termer: list[str], budget: int) -> tuple[str, list[str], int, bool]:
+    """Bygg ordlisteprompten ur termlistan.
+
+    Kommaseparerat, inte radbrutet: samma innehåll mätte 484 mot 541 tokens.
+    Termer kapas BAKIFRÅN tills prompten ryms i budgeten, så den gemensamma
+    basen (som ligger först) alltid överlever.
+
+    Returnerar (prompt, kapade termer, tokenantal, exakt räkning).
+    """
+    if not termer:
+        return "", [], 0, True
+    behallna = list(termer)
+    kapade: list[str] = []
+    while behallna:
+        text = ", ".join(behallna)
+        n, exakt = rakna_tokens(text)
+        if n <= budget:
+            return text, kapade, n, exakt
+        kapade.insert(0, behallna.pop())
+    return "", list(termer), 0, True
+
+
+def ordlista_prompt_for(cfg: dict, audio_path: Path, logger=None) -> str | None:
+    """Färdig ordlisteprompt för en ljudfil, eller None när steget är avstängt.
+
+    VIKTIGT: strängen ska skickas som faster-whispers **`hotwords`**, inte som
+    `initial_prompt`. `initial_prompt` läggs i `all_tokens`, och eftersom
+    `condition_on_previous_text = false` (KBLabs rekommendation) nollställs den
+    vid varje nytt 30-sekundersfönster — den når alltså bara filens första
+    halvminut. Uppmätt: en körning med initial_prompt gav identiskt resultat på
+    alla måltermer. `hotwords` injiceras i varje fönsters prompt.
+
+    Härleder temat ur ljudfilens mapp, bygger prompten och loggar vad som gick
+    in — och framför allt vad som kapades. En tyst trunkering vore ett osynligt
+    fel: termer skulle sluta verka utan att någon märkte det.
+    """
+    tcfg = cfg.get("transcription", {})
+    if not tcfg.get("ordlista_prompt", False):
+        return None
+
+    tema = temamapp_for(cfg, audio_path)
+    termer = load_ordlista(tema, bas=tcfg.get("prompt_bas", "gemensam"))
+    budget = int(tcfg.get("ordlista_prompt_max_tokens", 223))
+    prompt, kapade, n, exakt = bygg_ordlista_prompt(termer, budget)
+
+    if logger is not None:
+        ungefar = "" if exakt else " (uppskattat — tokenizer saknas)"
+        logger.info("ordlisteprompt: %s (%d termer, %d/%d tokens%s)",
+                    tema or "inkorgen — bara basen", len(termer) - len(kapade),
+                    n, budget, ungefar)
+        if kapade:
+            logger.warning("    KAPADE %d term(er) som inte fick plats: %s",
+                           len(kapade), ", ".join(kapade))
+    return prompt or None
 
 
 def load_dotenv() -> None:

@@ -157,6 +157,10 @@ def main() -> int:
         revision=revision,
     )
 
+    # Ordlisteprompt: gemensam bas + ljudfilens temamapp. Loggas
+    # inklusive eventuella kapade termer (se korrigeringar.ordlista_prompt_for).
+    prompt = k.ordlista_prompt_for(cfg, audio_path, logger)
+
     wall_start = time.monotonic()
     segments_iter, info = model.transcribe(
         str(audio_path),
@@ -164,6 +168,7 @@ def main() -> int:
         beam_size=tcfg["beam_size"],
         word_timestamps=True,
         condition_on_previous_text=tcfg["condition_on_previous_text"],
+        hotwords=prompt,          # inte initial_prompt — se korrigeringar.ordlista_prompt_for
     )
 
     # Segmenten är en generator — transkriberingen sker medan vi itererar.
@@ -207,6 +212,10 @@ def main() -> int:
         "language_probability": info.language_probability,
         "duration": info.duration,
         "duration_after_vad": getattr(info, "duration_after_vad", None),
+        # Vad som matades in i modellen — utan detta går två körningar av samma
+        # fil inte att skilja åt i efterhand.
+        "ordlista_prompt": prompt,
+        "ordlista_prompt_tema": k.temamapp_for(cfg, audio_path),
         "segments": segments,
     }
 

@@ -1,0 +1,32 @@
+# Kirk, TPUSA och kristen nationalism.
+#
+# Observerade förvanskningar inom parentes (ur zego-tpusa-och-nar).
+
+# Personer
+Charlie Kirk
+Lance Wallnau           # (Lens Wollnows) — arkitekten bakom sjubergsmandatet
+Ché Ahn                 # (Shean, Chial, Sihan, Chian) — vägen in i Turning Point
+Pete Hegseth
+Doug Wilson
+Abraham Kuyper          # (Kuiper)
+Jonathan Edwards        # (Jonas Edwards)
+James Talarico
+Jack Posobiec
+Candace Owens
+Jack Hibbs
+Rob McCoy
+Eric Metaxas
+
+# Organisationer och program
+Turning Point USA       # (Turnpoint, Turn Point)
+Turning Point USA Faith # (Turning Point USAF)
+Flashpoint              # (Flashboilt, Flashbolt)
+MAGA-rörelsen           # (Magarörelsen)
+
+# Begrepp
+kristen nationalism
+trumpism                # (Champismen) — LLM:n gissade fel: "karismatiken"
+Manifest Destiny        # (manifestet Destiny)
+Sjubergsmandatet
+herraväldesteologi
+Dominionism

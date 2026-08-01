@@ -1,0 +1,34 @@
+# Meta, admin, todo, fix — verktyg, teknik och arbetsflöden.
+#
+# Produktnamnen är den stora risken: Whisper gör dem till svenskklingande nonsens
+# (Clode, NoteGellum). Observerade förvanskningar inom parentes.
+
+# Personer
+Rikard Roitto           # (Richard Reuter) — nytestamentlig forskare, AI literacy
+
+# Produkter och tjänster
+Claude                  # (Clode)
+NotebookLM              # (NoteGellum)
+ChatGPT
+YouTube
+Facebook
+CoWork
+RAG
+
+# Begrepp
+AI literacy
+AI-slop                 # (AI-slogs) — engelskt slanguttryck, ingen svensk form
+AI-modell
+early adopters
+influencers
+ordbehandlare           # (Nordbehandlade)
+
+# Armand Duplantis: förekom i ett AI-genererat falskt inlägg om honom och Trump
+# som spreds bland Lars pastorskollegor — exempel på AI-slop, inte om friidrott.
+Armand Duplantis        # (Blandtis)
+
+# Internethistoria — återkommer när Lars talar om hur nätet förändrats
+Usenet
+Fidonet
+Eternal September
+Netscape Navigator

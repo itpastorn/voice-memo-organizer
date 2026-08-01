@@ -76,7 +76,33 @@ Allt maskinberoende bor i [config.toml](config.toml). Producerar tre filer
 Batchen är idempotent (hoppar över filer som redan har `.json`) och utesluter
 `test/` och `sammanfatta/`. Varje körning loggar modell, device, compute_type,
 ljudlängd och väggtid till stdout och `logs/transkribering.log` — för jämförelse
-laptop/arbetsstation. (Mätpunkt: medium på CPU/int8 ≈ 0,56× realtid.)
+laptop/arbetsstation. (Uppmätt spann: **0,56×–1,31× realtid** på medium/CPU/int8.
+Variationen är oförklarad — se issue #8; planera inte på bästafallet.)
+
+### Ordlisteprompt — kända namn matas in i förväg
+
+Whisper får inte memots eget nyckelord rätt av sig själv: *ungjordskreationism*
+förvanskades fyra gånger i samma fil, *cessationist* fem gånger i en annan.
+Prompten byggs per fil av **`ordlista/gemensam.txt` + `ordlista/<temamapp>.txt`**:
+
+| | |
+| --- | --- |
+| Skickas som | faster-whispers **`hotwords`** — `initial_prompt` når bara första 30-sekundersfönstret när `condition_on_previous_text=false` |
+| Tak | **223 tokens** (`448//2-1`), exakt räknat med modellens egen tokenizer |
+| Prioritet | basen överlever alltid; mappens termer kapas bakifrån och **loggas** |
+| Inkorgen | bara basen — temat är okänt tills filen sorterats |
+| Av/på | `transcription.ordlista_prompt` i config.toml |
+
+`transcription.prompt_bas` byter basfil när materialet inte är Lars egna memon.
+JSON:en bär `ordlista_prompt` och `ordlista_prompt_tema`, så två körningar av samma
+fil går att skilja åt i efterhand.
+
+**Avstängd som standard.** Tre prov visade ingen nytta: på en fil med **12 kända
+fel** rättades **0**, och flera blev sämre (`Nordbehandlade` → *en obehandlad rätt*
+— nonsens blev flytande nonsens). På en felfri fil försämrades interpunktionen.
+Slå inte på den utan att mäta om — underlaget står i CLAUDE.md steg a.
+
+Uppdelningen i `ordlista/` behålls ändå: den bär **steg b:s** mappscopning.
 
 ## Steg b — flaggning av felhörningar
 
@@ -84,7 +110,7 @@ Ord-konfidens räcker inte (modellen är ofta tryggt fel på egennamn och engels
 låneord). Detektorn är därför en LLM som läser transkriptet semantiskt.
 
 ```powershell
-# LLM-detektor (Claude). Ordlistan (ordlista.txt) ges som facit:
+# LLM-detektor (Claude). Ordlistan (gemensam + temamappens) ges som facit:
 ./venv/Scripts/python.exe flagga-llm.py
 # Billig, nyckelfri jämförelse (flaggar lägsta X % ord-konfidens):
 ./venv/Scripts/python.exe generera-corrections.py

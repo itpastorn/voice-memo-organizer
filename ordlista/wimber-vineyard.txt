@@ -1,0 +1,19 @@
+# Wimber och Vineyard.
+#
+# Ännu inte prövad i en genomkörning (3 ljudfiler). Fyll på när mappen körs.
+
+# Personer
+John Wimber
+Wimber
+Christie Wimber
+Lonnie Frisbee
+
+# Organisationer
+Vineyard
+Stockholm Vineyard
+Association of Vineyard Churches
+Calvary Chapel
+
+# Begrepp
+power evangelism
+Signs and Wonders

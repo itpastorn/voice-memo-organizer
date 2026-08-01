@@ -1,0 +1,25 @@
+# Gemensam ordlista — alltid med, oavsett temamapp.
+#
+# Detta är BASEN i initial_prompt (steg a) och läggs alltid först. Den överlever
+# budgetvakten även när mappens lista kapas, så håll den KORT: bara det som
+# återkommer i praktiskt taget varje memo.
+#
+# Vill du köra material som inte är Lars egna röstmemon: skapa en egen basfil här
+# och peka ut den med transcription.prompt_bas i config.toml. Ingen kodändring.
+#
+# Format: en term per rad. Rader som börjar med # är kommentarer, liksom allt
+# efter ett # på en rad. Behåll versaler som de står.
+
+Lars Gunther
+
+# Hunden. Förekommer i memon inspelade under promenader — Whisper hörde
+# "en porlande bäck i Maragon" för "med Aragorn", och detektorn trodde att det
+# var ett ortnamn.
+Aragorn
+
+NAR
+karismatik
+hyperkarismatik
+Equmeniakyrkan
+kontinuationist
+kontinuationism

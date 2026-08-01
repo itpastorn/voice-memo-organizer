@@ -54,9 +54,14 @@ def discover(root: Path, n: int) -> list[Path]:
     return files[:n]
 
 
-def transcribe_one(model, cfg: dict, meta: dict, audio: Path) -> tuple[float, float, int]:
-    """Transkribera EN fil, skriv json/srt/txt. Returnerar (ljudlängd, väggtid, segment)."""
+def transcribe_one(model, cfg: dict, meta: dict, audio: Path,
+                   logger=None) -> tuple[float, float, int]:
+    """Transkribera EN fil, skriv json/srt/txt. Returnerar (ljudlängd, väggtid, segment).
+
+    Ordlisteprompten härleds per fil ur ljudets temamapp — det är den enda
+    inställning som skiljer filerna åt i en batch."""
     tcfg = cfg["transcription"]
+    prompt = k.ordlista_prompt_for(cfg, audio, logger)
     wall = time.monotonic()
     seg_iter, info = model.transcribe(
         str(audio),
@@ -64,6 +69,7 @@ def transcribe_one(model, cfg: dict, meta: dict, audio: Path) -> tuple[float, fl
         beam_size=tcfg["beam_size"],
         word_timestamps=True,
         condition_on_previous_text=tcfg["condition_on_previous_text"],
+        hotwords=prompt,          # inte initial_prompt — se korrigeringar.ordlista_prompt_for
     )
     segments: list[dict] = []
     for seg in seg_iter:
@@ -85,6 +91,8 @@ def transcribe_one(model, cfg: dict, meta: dict, audio: Path) -> tuple[float, fl
         "beam_size": tcfg["beam_size"], "language": info.language,
         "language_probability": info.language_probability, "duration": info.duration,
         "duration_after_vad": getattr(info, "duration_after_vad", None),
+        "ordlista_prompt": prompt,
+        "ordlista_prompt_tema": k.temamapp_for(cfg, audio),
         "segments": segments,
     }
     stem = t.normalize_stem(audio.stem)
@@ -160,7 +168,7 @@ def main() -> int:
             continue
         logger.info("[%d/%d] transkriberar: %s", i, len(targets), audio.name)
         try:
-            dur, wall, nseg = transcribe_one(model, cfg, meta, audio)
+            dur, wall, nseg = transcribe_one(model, cfg, meta, audio, logger)
         except Exception as e:
             logger.error("[%d/%d] MISSLYCKADES %s: %s", i, len(targets), audio.name, e)
             continue

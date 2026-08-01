@@ -197,17 +197,21 @@ def main() -> int:
     if not json_path.is_file():
         print(f"FEL: JSON saknas: {json_path}", file=sys.stderr)
         return 1
-    if not txt_path.is_file():
-        print(f"FEL: corrections-txt saknas: {txt_path}", file=sys.stderr)
-        return 1
-
     data = json.loads(json_path.read_text(encoding="utf-8"))
     words = k.flatten_words(data.get("segments", []))
     if not words:
         print("FEL: JSON saknar ord-nivå-tidsstämplar.", file=sys.stderr)
         return 1
 
-    result = migrate(words, txt_path.read_text(encoding="utf-8"))
+    # Saknad -corrections.txt är inget fel: detektorn kan ha flaggat noll ord.
+    # Då byggs en tom sidecar så filen ändå går att öppna i GUI:t — Lars kan
+    # klicka vilket ord som helst (typ 3) och rätta det detektorn missade.
+    if txt_path.is_file():
+        result = migrate(words, txt_path.read_text(encoding="utf-8"))
+    else:
+        print(f"Ingen {txt_path.name} — bygger tom sidecar (0 flaggor).")
+        print("Öppna ändå i GUI:t: klicka valfritt ord för att rätta.")
+        result = {"flags": [], "phrase_edits": [], "insertions": [], "review": []}
 
     sidecar = {
         "audio_file": data.get("audio_file") or f"{json_path.stem}.m4a",
@@ -241,7 +245,7 @@ def main() -> int:
     unresolved = [f for f in flags if f["global_index"] is None]
     misverify = [f for f in flags if f["global_index"] is not None and not f["verify_ok"]]
 
-    print(f"Läste:   {txt_path.name}")
+    print(f"Läste:   {txt_path.name if txt_path.is_file() else '(ingen — tom sidecar)'}")
     print(f"Skrev:   {sidecar_path}")
     print()
     print(f"Ordflaggor: {len(flags)}")

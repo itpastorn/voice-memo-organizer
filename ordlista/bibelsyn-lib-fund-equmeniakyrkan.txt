@@ -1,0 +1,27 @@
+# Bibelsyn, liberalteologi, fundamentalism, Equmeniakyrkan.
+#
+# Svenskt samfundsmaterial. Ännu inte prövad i en genomkörning — termerna nedan
+# kommer från Torp-seminariet och från CLAUDE.md:s lista över kända felkällor.
+# Fyll på när mappen körs skarpt första gången.
+
+# Personer
+Nadia Bolz-Weber        # OBS: en annan person än Shawn Bolz i NAR-mappen
+Sofia Camnerin
+Åke Geresand
+Peter Halldorf
+Patrik Hagman
+Niklas Piensoho
+Mikael Tellbe
+Karin Wiborn
+
+# Organisationer
+Enskilda Högskolan
+Teamevangelisation
+
+# Begrepp
+liberalteologi
+fundamentalism
+cessationism
+inerrancy # Det engelska ordet används ofta
+felfri
+konstruktiv teologi

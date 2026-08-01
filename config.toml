@@ -5,7 +5,7 @@
 # Rot för allt ljud (inkorgen + temamappar). Ligger utanför projektet.
 root = "C:/Users/gunther/Dropbox/arkiv/mediadev/transkribera"
 # Steg 1: en enda hårdkodad testfil, relativt root. Byts för hand.
-test_file = "god-karismatik-egna-boken/zego-Andens-gavor-inte-konstant-formaga.m4a"
+test_file = "meta-admin-todo-fix/zego-ai-praktisk-nytta-i-kyrkan.m4a"
 
 [model]
 # Modellstorlek är konfiguration, inte konstant. medium nu, large när VRAM finns.
@@ -30,6 +30,17 @@ beam_size = 5
 cpu_threads = 0
 # condition_on_previous_text=False rekommenderas av KBLab (minskar upprepningar).
 condition_on_previous_text = false
+# Ordlisteprompt: mata in kända namn och begrepp så Whisper träffar rätt direkt.
+# Byggs av ordlista/gemensam.txt + ordlista/<temamapp>.txt, kommaseparerat.
+# Skickas som faster-whispers hotwords (inte initial_prompt — den når bara
+# filens första 30-sekundersfönster när condition_on_previous_text=false).
+# Sätt false om prompten skulle börja läcka in i transkriptionen (se CLAUDE.md).
+ordlista_prompt = false
+# Whispers tak är 448//2-1 = 223 tokens. Basen prioriteras; temamappens termer
+# kapas bakifrån om det behövs, och det som kapas loggas.
+ordlista_prompt_max_tokens = 223
+# Basfilen i ordlista/ (utan .txt). Byt när materialet inte är Lars egna memon.
+prompt_bas = "gemensam"
 
 [corrections]
 # Steg b: flaggning av oklarheter. Relativ tröskel: flagga de X % av orden som

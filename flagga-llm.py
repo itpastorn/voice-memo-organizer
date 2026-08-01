@@ -145,7 +145,12 @@ def main() -> int:
     limit = len(words) if max_ord <= 0 else min(max_ord, len(words))
     chunk = int(ccfg["llm_chunk_ord"])
     model = ccfg["llm_modell"]
-    ordlista = k.load_ordlista()
+    # Ordlistan scopas till ljudets temamapp (gemensam bas + mappens fil).
+    # Minskar brus: 'Nadia Bolz-Weber' i en global lista fick detektorn att
+    # missa 'Shawn Bolz'. Inkorgen har okänt tema och får därför allt — steg b
+    # har ingen längdgräns, så det kostar inget.
+    tema = k.temamapp_for(cfg, json_path)
+    ordlista = k.load_ordlista(tema, allt=tema is None)
 
     import anthropic
     try:
