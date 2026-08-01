@@ -141,3 +141,27 @@ falsifiera              # (valsiverats)
 Krakatoa                # (Kvackatoan)
 Grönlandsisen
 Antarktis
+
+# --- AI/teknik (genomkörning 2026-08-01, meta-admin-todo-fix) ---
+#
+# Produktnamnen är den stora risken: Whisper gör dem till svenskklingande
+# nonsens (Clode, NoteGellum). Detektorn klarade dem ur egen världskunskap,
+# men listan gör träffen säker — och namnen återkommer i varje AI-memo.
+
+# Personer
+Rikard Roitto           # (Richard Reuter) — nytestamentlig forskare
+
+# Produkter och tjänster
+Claude                  # (Clode)
+NotebookLM              # (NoteGellum)
+ChatGPT
+YouTube
+Facebook
+
+# Begrepp
+AI literacy
+AI-slop                 # (AI-slogs) — engelskt slanguttryck, ingen svensk form
+early adopters
+influencers
+AI-modell
+ordbehandlare           # (Nordbehandlade)
