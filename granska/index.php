@@ -285,7 +285,9 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   <?php endif; ?>
 </aside>
 </div>
-<audio id="player" src="audio.php" preload="none"></audio>
+<?php // ?f=<stem> är en cache-nyckel: utan den har varje fil samma URL, och
+      // webbläsaren spelar upp föregående fils ljud ur cachen (max-age=3600). ?>
+<audio id="player" src="audio.php?f=<?= rawurlencode($cur['stem']) ?>" preload="none"></audio>
 <div id="saved">sparat ✓</div>
 
 <script>

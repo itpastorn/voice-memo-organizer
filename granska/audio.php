@@ -10,6 +10,14 @@ $file = $dataDir . '/' . ($cur['audio_file'] ?? '');
 
 if (!$cur || !is_file($file)) { http_response_code(404); exit('ljudfil saknas'); }
 
+// ?f=<stem> sätts av index.php och är dels cache-nyckel, dels en kontroll: en
+// gammal flik (eller en cachad sida) kan annars begära ljud för en fil som inte
+// längre är vald, och skulle då tyst få FEL memos ljud. Hellre ett fel än det.
+if (isset($_GET['f']) && $_GET['f'] !== ($cur['stem'] ?? '')) {
+    http_response_code(409);
+    exit('annan fil är vald nu (' . htmlspecialchars($cur['stem'] ?? '—') . ') — ladda om sidan');
+}
+
 $size = filesize($file);
 $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
 $mime = ['m4a' => 'audio/mp4', 'mp4' => 'audio/mp4', 'aac' => 'audio/aac', 'mp3' => 'audio/mpeg'][$ext]
