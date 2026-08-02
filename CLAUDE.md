@@ -208,6 +208,13 @@ Docker): `migrera-corrections.py` gör .txt:en till en strukturerad sidecar,
 GUI:t skriver besluten, och `applicera-corrections.py` skriver dem in i JSON:en
 och sätter `probability = 1.0` på granskade ord.
 
+**Batch:** `batch-flagga.py` kör flaggningen över många filer och **migrerar
+direkt till sidecar**, så de blir granskningsklara i väljaren utan ett extra
+skriptanrop per fil. Upptäcker det som saknar flaggning (nyaste först),
+uppskattar kostnaden vid `--dry-run`, och är idempotent. Avbryter hela batchen om
+ingen bit går igenom — annars lämnas kön halvflaggad vid slut på API-krediter,
+vilket redan hänt en gång. Rör inte `current.json`.
+
 **Filväljaren (`granska/valj.php`) är GUI:ts ingång.** Den listar alla
 transkriptioner i datamappen, senaste först (`generated_at`, annars filens
 ändringstid för äldre försök), med filter på temamapp och filnamn. Kom till när

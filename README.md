@@ -112,9 +112,21 @@ låneord). Detektorn är därför en LLM som läser transkriptet semantiskt.
 ```powershell
 # LLM-detektor (Claude). Ordlistan (gemensam + temamappens) ges som facit:
 ./venv/Scripts/python.exe flagga-llm.py
+
+# Batch — flaggar OCH migrerar till sidecar, så filerna blir granskningsklara:
+./venv/Scripts/python.exe batch-flagga.py [--antal=5] [--dry-run]
+./venv/Scripts/python.exe batch-flagga.py NAR-profetrorelsen/zego-x.json ...
+
 # Billig, nyckelfri jämförelse (flaggar lägsta X % ord-konfidens):
 ./venv/Scripts/python.exe generera-corrections.py
 ```
+
+`batch-flagga.py` upptäcker alla transkriptioner utan flaggning, nyaste först.
+`--dry-run` listar dem och **uppskattar kostnaden** innan något körs. Idempotent:
+filer med `.txt` eller sidecar hoppas över, så en avbruten körning fortsätter där
+den slutade. Går ingen bit igenom (slut på API-krediter, nere API) avbryts hela
+batchen i stället för att lämna kön halvflaggad. `granska/current.json` rörs inte
+— vilket memo som granskas är ditt val i GUI:t.
 
 Skriver `<namn>-corrections.txt` bredvid JSON:en. Varje flaggat ord får sitt
 **ankare** (ordets starttid, `@37.86`) och LLM:ns gissning som `#`-kommentar.
