@@ -53,6 +53,36 @@ def json_path_for(cfg: dict) -> Path:
     return audio_root / test_file.parent / f"{stem}.json"
 
 
+def aktuell_json(cfg: dict) -> tuple[Path, str]:
+    """Vilken fil arbetar vi med? `granska/current.json` — den fil GUI:t visar —
+    annars `data.test_file` i config.toml.
+
+    Alla steg efter granskningen måste välja likadant. Gör de inte det granskar
+    man fil X och bearbetar fil Y: apply skriver besluten i fel JSON, och steg c
+    producerar en .md för fel memo.
+
+    Returnerar (sökväg, varifrån valet kom); källan skrivs ut i skriptens
+    rapporter så att ett felaktigt val syns direkt.
+    """
+    cur_file = PROJECT_ROOT / "granska" / "current.json"
+    if cur_file.is_file():
+        try:
+            rel = json.loads(cur_file.read_text(encoding="utf-8")).get("transcript_json")
+            if rel:
+                p = Path(cfg["data"]["root"]) / rel
+                # Runda 2 pekar current.json på basen (-bak2.json), men den
+                # levande texten är alltid <stem>.json.
+                for slut in ("-bak2.json", "-bak.json"):
+                    if p.name.endswith(slut):
+                        p = p.with_name(p.name[: -len(slut)] + ".json")
+                        break
+                if p.is_file():
+                    return p, "granska/current.json (GUI:ts val)"
+        except (json.JSONDecodeError, OSError, KeyError):
+            pass
+    return json_path_for(cfg), "config.toml (data.test_file)"
+
+
 def rel_to_root(cfg: dict, path: Path) -> str:
     """Sökväg relativt datamappens rot, med snedstreck — formatet granska/current.json
     använder. Ljudet ligger i temamappar (NAR-profetrorelsen/...), och GUI:t monterar

@@ -8,20 +8,108 @@ Ljudet ligger utanför repot, i en datamapp som pekas ut av `data.root` i
 [config.toml](config.toml). Originalljudet rörs aldrig — allt som produceras är
 härledda filer bredvid ljudet.
 
+---
+
+## Snabbmanual — så kör du kedjan
+
+Exemplen är Git Bash. Sätt genvägarna en gång per terminalfönster:
+
+```bash
+VMO=/c/Users/gunther/Dropbox/arkiv/workspace/ai-agents-projects/voice-memo-organizer
+PY="$VMO/venv/Scripts/python.exe"
+alias batch="$PY $VMO/batch-transkribera.py"
+```
+
+### 1. Transkribera (steg a) — dyrt, allt annat är billigt
+
+Ställ dig i temamappen med ljudet och peka ut filerna. **`"$PWD"/` behövs** —
+utan den letar skriptet i inkorgen.
+
+```bash
+cd /c/Users/gunther/Dropbox/arkiv/mediadev/transkribera/NAR-profetrorelsen
+batch "$PWD"/*.m4a --dry-run     # se vad som skulle köras
+batch "$PWD"/*.m4a               # kör allt (idempotent — hoppar över klara)
+files=("$PWD"/*.m4a); batch "${files[@]:0:3}"   # eller bara några
+```
+
+Räkna med **0,8–1,5× realtid**; 39 filer ≈ 9 timmar. **Datorn somnar och stryper
+jobbet** efter ~20 minuter utan tillsyn (issue #9) — starta långa körningar från
+PowerShell med vaken-låsning, eller stanna vid datorn.
+
+### 2. Flagga felhörningar (steg b) — ~$0,25/fil
+
+```bash
+cd "$VMO"
+"$PY" batch-flagga.py --dry-run   # lista + kostnadsuppskattning
+"$PY" batch-flagga.py             # flaggar OCH gör granskningsklart
+```
+
+### 3. Granska i webbläsaren
+
+```bash
+cd "$VMO/granska" && docker compose up      # http://localhost:8137
+```
+
+Väljaren listar alla filer, senaste överst. Klicka en → rätta med `n` (nästa),
+`↵` (godta förslag), `c` (eget ord), `r` (rätt som är), `Space` (lyssna).
+Duger transkriptionen inte alls — t.ex. memo på engelska — tryck **Märk: ny
+transkription behövs** i sidopanelen.
+
+### 4. Skriv in besluten
+
+```bash
+"$PY" applicera-corrections.py    # följer filen du valt i GUI:t
+```
+
+### 5. Läsbar text (steg c)
+
+```bash
+"$PY" forbattra.py         # -> <namn>.md
+"$PY" negationsvakt.py     # larmar om en negation tappats
+```
+
+**Kör om steg c** efter varje ny apply — `.md` är ett derivat av JSON:en.
+
+Steg 4 och 5 arbetar alla på **den fil du valt i GUI:t** (`granska/current.json`),
+och skriver ut vilken det blev. Har du inte valt någon används `data.test_file`
+i config.toml.
+
+| Vill du... | Gör så |
+| --- | --- |
+| köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `transkribera.py` |
+| granska en fil som saknar flaggning | öppna den ändå i väljaren, klicka valfritt ord |
+| leta subtila fel en gång till | `granska-igen.py` (Claude Fable, ~$4/fil — sällan behövt) |
+| transkribera om en fil | ta bort dess `-corrections.*`, `-bak*.json` och kopian i `granska/state/` **först** |
+
+---
+
 ## Pipeline och status
 
 | Steg | Vad | Status |
 | --- | --- | --- |
-| **a** | Transkribering (KBLab Whisper) → `.json`/`.srt`/`.txt` | ✅ |
-| **b** | Flaggning av felhörningar (LLM) → `-corrections.txt` | ✅ |
-| — | Granska-GUI (webb): migrera → rätta → applicera | ✅ |
+| **a** | Transkribering (KBLab Whisper) → `.json`/`.srt`/`.txt` · enskild + batch | ✅ |
+| **b** | Flaggning av felhörningar (LLM) → sidecar · enskild + batch | ✅ |
+| — | Granska-GUI (webb): filväljare → rätta → applicera | ✅ |
 | **2** | Apply: skriv besluten till JSON, sätt `probability=1.0` | ✅ |
-| — | Runda 2 (frivillig): kontextgranskning med Claude Fable → GUI → apply | ✅ |
+| — | Runda 2 (frivillig): kontextgranskning med Claude Fable | ✅ sällan behövd |
 | **c** | Språklig förbättring → `.md` + `-borttaget.txt` | ✅ prototyp |
 | — | Negationsvakt: deterministisk kontroll av steg c-utdatan | ✅ |
-| **d** | QDA-taggning (kodbok, blocknivå) | ⬜ |
+| **d** | QDA-taggning (kodbok, blocknivå) | ⬜ kodboken obeslutad |
 | **e** | SQLite-index (FTS5) för sökning | ⬜ |
 | **f** | Metadatataggar på ljudfilerna (efter a, c och d) | ⬜ |
+
+Sex filer har gått hela vägen a → c i fem ämnesområden. **Flaggfrekvensen ligger på
+1,3–2 % av orden oberoende av ämne** — det är en egenskap hos ljudet och modellen,
+inte hos domänen, och detektorn klarade tre domäner där ordlistan var tom.
+
+### Kända hinder
+
+| # | Vad | Följd |
+| --- | --- | --- |
+| [#9](../../issues/9) | Modernt vänteläge stryper nattbatch | **blockerar arkivgenomkörningen** |
+| [#8](../../issues/8) | Hastigheten spänner 0,56×–1,99× oförklarat | går inte att planera på |
+| [#11](../../issues/11) | Språkdetektering avstängd av config | engelska memon översätts tyst |
+| [#7](../../issues/7) | Samma namn förvanskat olika — bara ett flaggas | detektorn ser ord, inte dokument |
 
 ## Modellen: KBLab kb-whisper via faster-whisper
 
@@ -67,17 +155,29 @@ Allt maskinberoende bor i [config.toml](config.toml). Producerar tre filer
 # En enda fil (sökväg i data.test_file, byts för hand):
 ./venv/Scripts/python.exe transkribera.py
 
-# Batch — modellen laddas en gång. Utan argument: de 5 nyaste utan .json:
+# Batch — modellen laddas en gång. Utan argument: de 5 nyaste utan .json
+# i HELA datamappen, inte i mappen du står i:
 ./venv/Scripts/python.exe batch-transkribera.py [--antal=5] [--dry-run]
 # ...eller explicita filer (relativt data.root eller absoluta):
 ./venv/Scripts/python.exe batch-transkribera.py fil1.m4a undermapp/fil2.mp3
 ```
 
+Vill du köra **en temamapp** måste filerna pekas ut — se snabbmanualen överst.
+
 Batchen är idempotent (hoppar över filer som redan har `.json`) och utesluter
 `test/` och `sammanfatta/`. Varje körning loggar modell, device, compute_type,
 ljudlängd och väggtid till stdout och `logs/transkribering.log` — för jämförelse
-laptop/arbetsstation. (Uppmätt spann: **0,56×–1,31× realtid** på medium/CPU/int8.
-Variationen är oförklarad — se issue #8; planera inte på bästafallet.)
+laptop/arbetsstation.
+
+**Hastigheten går inte att planera på.** Uppmätt på samma maskin och inställningar:
+0,56× (referensen), 0,76–0,82×, 0,99×, 1,25–1,31×, och 1,52–1,99× med
+ordlisteprompt. Spannet är 3,5× och orsaken är okänd — se issue #8. Räkna inte på
+bästafallet: skillnaden mellan 0,8× och 1,5× är ~100 timmar CPU på arkivets
+återstående filer.
+
+**Transkriberar du om en fil** varnar skriptet om det redan finns härledda filer
+(`-corrections.*`, `-bak*.json`). De indexerar den gamla texten och måste bort
+innan du flaggar om — annars pekar ordindexen fel.
 
 ### Ordlisteprompt — kända namn matas in i förväg
 
@@ -139,21 +239,21 @@ Ett webbgränssnitt för att rätta felhörningarna snabbt — ett ord i taget m
 kontext, tangentbord först, och loopad ljuduppspelning runt varje problem.
 
 ```powershell
-# 1. Migrera corrections-txt -> strukturerad sidecar (+ .env första gången):
-./venv/Scripts/python.exe migrera-corrections.py
-
-# 2. Starta GUI:t (från granska/):
 cd granska; docker compose up      # öppna http://localhost:8137
 ```
 
+Använder du `batch-flagga.py` är sidecarerna redan skrivna. Kör du enstaka filer med
+`flagga-llm.py` behövs `migrera-corrections.py` däremellan (den skriver också
+`granska/.env` första gången, vilket Docker-uppstarten kräver).
+
 **Filväljaren är ingången.** `valj.php` listar **alla** transkriptioner i datamappen,
 senaste överst, med filter på temamapp och filnamn. Statuskolumnen visar var varje
-fil står: `ej flaggad` · `X flaggor, Y kvar` · `applicerad` · `runda 2`.
+fil står: `ej flaggad` · `inga fel funna` · `X flaggor, Y kvar` · `applicerad` ·
+`runda 2` · `⚠ ny transkription behövs`.
 
-Steg 1 ovan behövs bara för filer du vill ha AI-flaggade. **Filer utan sidecar går
-att öppna ändå** — de får en tom arbetskopia, och du rättar genom att klicka valfritt
-ord i texten. Saknas ljudfilen (gäller äldre transkript) märks ljudpanelen ut och
-resten fungerar som vanligt.
+**Filer utan sidecar går att öppna ändå** — de får en tom arbetskopia, och du rättar
+genom att klicka valfritt ord i texten. Saknas ljudfilen (gäller äldre transkript)
+märks ljudpanelen ut och resten fungerar som vanligt.
 
 Valet skrivs till `granska/current.json`, och `applicera-corrections.py` följer det —
 annars vore väljaren en fälla: granska fil X, applicera fil Y.
@@ -189,12 +289,22 @@ När granskningen är klar skrivs besluten in i JSON:en:
 ./venv/Scripts/python.exe applicera-corrections.py
 ```
 
+**Vilken fil?** `granska/current.json` — alltså den du valt i GUI:t — annars
+`data.test_file` i config.toml. Rapporten skriver ut vilken fil som träffades och
+varifrån valet kom, så ett felaktigt val syns direkt.
+
 Säkerhetskopierar `<namn>.json` → `<namn>-bak.json` (en gång), skriver den
 korrigerade datan i `.json`, sätter `probability=1.0` på granskade ord, och
 regenererar `.srt`/`.txt`. Läser alltid rundans orörda bas som källa (runda 1:
 `-bak.json`; runda 2: sidecarens `base_json` → `-bak2.json`) — **idempotent**:
 kör om utan skada. Osäkra och ogranskade ord lämnas orörda. Finns en runda
 2-sidecar (`-corrections-2.json`) appliceras den; annars runda 1.
+
+**Vägrar** om sidecarens `word_count` inte stämmer med källans ordantal — då har
+transkriptionen bytts under sidecaren och besluten skulle skrivas på fel ord.
+**Varnar** om filen är märkt "ny transkription behövs".
+
+Glöm inte att köra om steg c efteråt: `.md` är ett derivat av JSON:en.
 
 ## Runda 2 — kontextgranskning med Claude Fable (frivillig)
 
@@ -224,6 +334,9 @@ befintliga flaggor och GUI-beslut behålls. `--max=N` finns för billig testning
 ./venv/Scripts/python.exe forbattra.py       # -> <namn>.md + <namn>-borttaget.txt
 ./venv/Scripts/python.exe negationsvakt.py   # deterministisk vakt, inga API-anrop
 ```
+
+Båda arbetar på samma fil som apply: `granska/current.json` om den finns, annars
+`data.test_file`. Källan skrivs ut i rapporten.
 
 `forbattra.py` städar språket utan att skriva om Lars och föreslår radering av
 icke-innehåll (samlas i `-borttaget.txt`). `negationsvakt.py` räknar

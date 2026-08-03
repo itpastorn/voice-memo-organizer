@@ -68,38 +68,9 @@ def tokens_over(text: str, t0: float, t1: float, seg: int) -> list[dict]:
     return out
 
 
-def valj_transkript(cfg: dict) -> tuple[Path, str]:
-    """Vilken fil ska appliceras? granska/current.json först — det är den fil GUI:t
-    faktiskt visar, och sekvensen är nästan alltid granska -> applicera. Utan detta
-    blir filväljaren en fälla: man granskar fil X och applicerar fil Y.
-
-    Faller tillbaka på data.test_file i config.toml (som före väljaren fanns).
-    Returnerar (sökväg, varifrån valet kom) — källan skrivs ut i rapporten så att
-    ett felaktigt val syns direkt.
-    """
-    cur_file = PROJECT_ROOT / "granska" / "current.json"
-    if cur_file.is_file():
-        try:
-            cur = json.loads(cur_file.read_text(encoding="utf-8"))
-            rel = cur.get("transcript_json")
-            if rel:
-                # Runda 2 pekar current.json på basen (-bak2.json); apply ska ändå
-                # skriva den levande .json:en. Sidecarens base_json styr källan.
-                p = Path(cfg["data"]["root"]) / rel
-                for slut in ("-bak2.json", "-bak.json"):
-                    if p.name.endswith(slut):
-                        p = p.with_name(p.name[: -len(slut)] + ".json")
-                        break
-                if p.is_file():
-                    return p, "granska/current.json (GUI:ts val)"
-        except (json.JSONDecodeError, OSError):
-            pass
-    return k.json_path_for(cfg), "config.toml (data.test_file)"
-
-
 def main() -> int:
     cfg = k.load_config()
-    json_path, vald_via = valj_transkript(cfg)
+    json_path, vald_via = k.aktuell_json(cfg)
     if not json_path.is_file():
         print(f"FEL: JSON saknas: {json_path}", file=sys.stderr)
         return 1

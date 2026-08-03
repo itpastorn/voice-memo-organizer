@@ -110,7 +110,7 @@ def process_chunk(client, segments, start, end, model):
 
 def main() -> int:
     cfg = k.load_config()
-    json_path = k.json_path_for(cfg)
+    json_path, vald_via = k.aktuell_json(cfg)
     if not json_path.is_file():
         print(f"FEL: JSON saknas: {json_path}", file=sys.stderr)
         return 1
@@ -209,6 +209,7 @@ def main() -> int:
         removed_path.write_text(header + "\n".join(removed_lines), encoding="utf-8")
 
     print()
+    print(f"Fil:     {json_path.name}   <- {vald_via}")
     print(f"Läste:   {json_path.name} (segment {from_seg}–{end_all - 1}, {limit} st)")
     print(f"Block:   {len(all_blocks)} totalt — {kept} behållna, {len(removed_lines)} för radering")
     print(f"Tokens:  in {in_tok}, ut {out_tok}")

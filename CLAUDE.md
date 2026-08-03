@@ -247,10 +247,11 @@ Två följdbeslut som är lätta att missa:
   arbetskopia; typ 3 (klicka valfritt ord) räcker för att rätta. Alternativet —
   att bara visa förberedda filer — hade gjort nytranskriberat material osynligt
   tills två Python-steg körts.
-- **`applicera-corrections.py` läser `granska/current.json`** och faller tillbaka
-  på `config.toml`. Utan det blir väljaren en fälla: man granskar fil X och
-  applicerar fil Y. Rapporten skriver ut vilken fil som träffades och varifrån
-  valet kom.
+- **Alla steg efter granskningen följer `granska/current.json`** via
+  `korrigeringar.aktuell_json()`, med `config.toml` som fallback:
+  `applicera-corrections.py`, `forbattra.py` och `negationsvakt.py`. Utan det blir
+  väljaren en fälla — man granskar fil X, applicerar fil Y och producerar en `.md`
+  för fil Z. Alla tre skriver ut vilken fil som träffades och varifrån valet kom.
 
 **Runda 2 (frivillig): kontextgranskning med Claude Fable.** Subtila fel
 överlever runda 1 — riktiga ord fel i sammanhanget ("få *råd* av Gud" → nåd,

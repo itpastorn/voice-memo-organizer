@@ -63,7 +63,7 @@ def md_block(md_text: str) -> list[tuple[float, str]]:
 
 def main() -> int:
     cfg = k.load_config()
-    json_path = k.json_path_for(cfg)
+    json_path, vald_via = k.aktuell_json(cfg)
     md_path = json_path.with_suffix(".md")
 
     if not json_path.is_file():
@@ -106,6 +106,7 @@ def main() -> int:
 
     print()
     print(f"Jämförde {len(block)} block i {md_path.name} mot {json_path.name}")
+    print(f"Fil vald via: {vald_via}")
     if avvikelser:
         print(f"{avvikelser} block avviker — varje polaritetsändring ska vara ett "
               "medvetet beslut. Falska positiva förekommer (ihopslagna meningar, "
