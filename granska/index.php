@@ -58,6 +58,11 @@ $side['flags'] = $side['flags'] ?? [];
 // Ljudfilen kan saknas (äldre transkript bär ingen audio_file, och gissningen kan
 // slå fel). Granskningen ska fungera ändå — text går att rätta utan ljud.
 $harLjud = is_file($dataDir . '/' . ($cur['audio_file'] ?? ''));
+
+// Filstatus (granska/status.json): märkning om att transkriptionen inte duger
+// och behöver göras om, t.ex. för att memot är på ett annat språk än modellen.
+$statusAlla = json_decode(@file_get_contents($here . '/status.json'), true) ?: [];
+$filStatus = $statusAlla[$cur['transcript_json']] ?? null;
 $temamapp = dirname($cur['transcript_json']);
 $temamapp = ($temamapp === '.' || $temamapp === '') ? '(inkorgen)' : $temamapp;
 
@@ -178,6 +183,14 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   a.tillbaka { color:var(--acc); text-decoration:none; font-weight:600; white-space:nowrap; }
   a.tillbaka:hover { text-decoration:underline; }
   .var { color:var(--muted); font-size:13px; }
+  .varning { background:#fecaca; border:1px solid var(--delete-b); color:#7f1d1d;
+             border-radius:5px; padding:2px 9px; font-size:13px; font-weight:600; }
+  #statusBtn { font:600 13px system-ui; padding:.4rem .6rem; border:1px solid var(--line);
+               background:#fff; border-radius:6px; cursor:pointer; width:100%; }
+  #statusBtn:hover { border-color:var(--muted); }
+  #statusBtn.pa { background:#fecaca; border-color:var(--delete-b); }
+  #statusNote { width:100%; font:13px system-ui; padding:.35rem .5rem; margin-top:.4rem;
+                border:1px solid var(--line); border-radius:6px; }
   @media (max-width:900px){ .layout{grid-template-columns:1fr} aside{position:static;height:auto;border-left:0;border-top:1px solid var(--line)} }
 </style>
 </head>
@@ -186,6 +199,10 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   <a class="tillbaka" href="valj.php">&#9664; Alla filer</a>
   <h1><?= htmlspecialchars($cur['stem']) ?></h1>
   <span class="var"><?= htmlspecialchars($temamapp) ?></span>
+  <?php if ($filStatus): ?>
+    <span class="varning" id="varning">⚠ Ny transkription behövs<?=
+      $filStatus['note'] ? ' — ' . htmlspecialchars($filStatus['note']) : '' ?></span>
+  <?php endif; ?>
   <span id="counts">
     <b id="c-tot"><?= count($side['flags']) ?></b> flaggor ·
     beslutade <b id="c-done"><?= $decided ?></b> ·
@@ -221,6 +238,17 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   <div class="panel" id="panel">
     <h2>Åtgärd</h2>
     <div id="pbody" style="color:var(--muted)">Klicka ett ord, eller tryck <kbd>n</kbd> för första kvarvarande flagga.</div>
+  </div>
+
+  <div class="panel">
+    <h2>Filstatus</h2>
+    <button id="statusBtn" class="<?= $filStatus ? 'pa' : '' ?>">
+      <?= $filStatus ? '✓ Märkt: ny transkription behövs' : 'Märk: ny transkription behövs' ?>
+    </button>
+    <input id="statusNote" placeholder="skäl, t.ex. 'talat på engelska'"
+           value="<?= htmlspecialchars($filStatus['note'] ?? '') ?>" autocomplete="off">
+    <p class="hint">Märkningen syns i filväljaren och gör att <code>batch-flagga.py</code>
+      hoppar över filen — ingen mening att flagga ord i en transkription som ska göras om.</p>
   </div>
 
   <div class="panel" id="audioPanel">
@@ -631,6 +659,28 @@ player.addEventListener('ended', () => { if(looping){ player.currentTime=loopSta
 document.getElementById('btnPlay')?.addEventListener('click', toggleLoop);
 document.getElementById('btnNarrow')?.addEventListener('click', () => adjustPad(-5));
 document.getElementById('btnWiden')?.addEventListener('click', () => adjustPad(5));
+
+// --- Filstatus: "ny transkription behövs" ---
+const TRANSKRIPT = <?= json_encode($cur['transcript_json'], JSON_UNESCAPED_UNICODE) ?>;
+let statusPa = <?= $filStatus ? 'true' : 'false' ?>;
+const statusBtn = document.getElementById('statusBtn');
+statusBtn.addEventListener('click', () => {
+  const note = document.getElementById('statusNote').value.trim();
+  fetch('status.php', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({fil: TRANSKRIPT, status: statusPa ? null : 'ny-transkription', note})})
+    .then(r => r.json())
+    .then(res => {
+      if(!res.ok){ alert('Kunde inte spara status: ' + (res.error||'okänt')); return; }
+      statusPa = !statusPa;
+      statusBtn.textContent = statusPa ? '✓ Märkt: ny transkription behövs' : 'Märk: ny transkription behövs';
+      statusBtn.classList.toggle('pa', statusPa);
+      flashSaved();
+      const v = document.getElementById('varning');
+      if (statusPa && !v) location.reload();     // visa varningen i huvudet
+      else if (!statusPa && v) v.remove();
+    })
+    .catch(e => alert('Nätverksfel: ' + e));
+});
 
 rebuildOsakerList();   // fyll listorna vid start
 markPhrases();

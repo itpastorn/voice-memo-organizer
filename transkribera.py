@@ -222,6 +222,22 @@ def main() -> int:
     stem = normalize_stem(audio_path.stem)
     out_dir = audio_path.parent
     json_path = out_dir / f"{stem}.json"
+
+    # Omtranskribering: härledda filer från FÖRRA körningen indexerar den gamla
+    # texten. En sidecar vars global_index pekar på andra ord skriver besluten på
+    # fel ställe, och -bak.json skulle få apply att läsa det gamla transkriptet
+    # som källa. Ordantalskontrollen i applicera-corrections.py fångar det första
+    # men inte det andra — därför en varning här.
+    gamla = [p for p in (out_dir / f"{stem}-bak.json", out_dir / f"{stem}-bak2.json",
+                         out_dir / f"{stem}-corrections.txt",
+                         out_dir / f"{stem}-corrections.json",
+                         out_dir / f"{stem}-corrections-2.json") if p.exists()]
+    if gamla:
+        logger.warning("VARNING: filen har härledda filer från en tidigare körning:")
+        for p in gamla:
+            logger.warning("    %s", p.name)
+        logger.warning("    De hör till den GAMLA texten. Ta bort dem (och ev. kopian i")
+        logger.warning("    granska/state/) innan du flaggar om, annars pekar ordindexen fel.")
     srt_path = out_dir / f"{stem}.srt"
     txt_path = out_dir / f"{stem}.txt"
 

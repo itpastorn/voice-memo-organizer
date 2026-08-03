@@ -146,6 +146,35 @@ def main() -> int:
         print("FEL: JSON saknar ord.", file=sys.stderr)
         return 1
 
+    # Sidecarens global_index/span/after_index refererar ordpositioner i den
+    # källa den skapades mot. Stämmer inte ordantalet har källan bytts under
+    # sidecaren — t.ex. efter en omtranskribering — och besluten skulle skrivas
+    # in på FEL ord, tyst. Hellre stopp än en tyst förstörd sanningskälla.
+    vantat = side.get("word_count")
+    if vantat is not None and vantat != n:
+        print(f"FEL: sidecaren gjordes mot {vantat} ord, men {source.name} har {n}.",
+              file=sys.stderr)
+        print("Transkriptionen har ändrats sedan flaggningen — ordindexen pekar fel.",
+              file=sys.stderr)
+        print(f"Åtgärd: ta bort {sidecar_path.name} (och ev. -corrections.txt) och "
+              "flagga om filen.", file=sys.stderr)
+        return 1
+
+    # Filen kan vara märkt i GUI:t som "ny transkription behövs" — då är hela
+    # transkriptionen underkänd och besluten i sidecaren är byggda på den.
+    status_fil = PROJECT_ROOT / "granska" / "status.json"
+    if status_fil.is_file():
+        try:
+            alla = json.loads(status_fil.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            alla = {}
+        for rel, v in alla.items():
+            if Path(rel).name == json_path.name and v.get("status") == "ny-transkription":
+                print(f"VARNING: {json_path.name} är märkt 'ny transkription behövs'"
+                      + (f" ({v['note']})" if v.get("note") else ""), file=sys.stderr)
+                print("         Besluten bygger på en transkription du underkänt.",
+                      file=sys.stderr)
+
     # Operationer ur sidecaren.
     flags = {f["global_index"]: f for f in side.get("flags", []) if f.get("global_index") is not None}
     phrases = [p for p in side.get("phrase_edits", []) if "span_start" in p and "span_end" in p]

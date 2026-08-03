@@ -143,6 +143,7 @@ sort($mappar);
 
 $cur = json_decode(@file_get_contents($here . '/current.json'), true) ?: [];
 $aktiv = $cur['transcript_json'] ?? '';
+$statusAlla = json_decode(@file_get_contents($here . '/status.json'), true) ?: [];
 
 function hms(?float $s): string {
     if ($s === null) return '—';
@@ -185,6 +186,7 @@ function hms(?float $s): string {
   .chip.applicerad { background:var(--done); }
   .chip.kvar { background:var(--pending); }
   .chip.ingen { background:var(--none); color:var(--muted); }
+  .chip.ny { background:#fecaca; color:#7f1d1d; }
   .r2 { display:inline-block; background:#e0e7ff; color:#3730a3; border-radius:4px;
         padding:1px 5px; font-size:11px; font-weight:600; margin-left:.3rem; }
   .md { color:var(--muted); font-size:12px; }
@@ -217,7 +219,9 @@ function hms(?float $s): string {
       <td class="tid <?= $r['tid_gissad'] ? 'gissad' : '' ?>"><?= htmlspecialchars(substr(str_replace('T', ' ', $r['tid']), 0, 16)) ?></td>
       <td class="num"><?= hms($r['langd']) ?></td>
       <td>
-        <?php if ($r['applicerad']): ?>
+        <?php if (isset($statusAlla[$r['rel']])): ?>
+          <span class="chip ny" title="<?= htmlspecialchars($statusAlla[$r['rel']]['note'] ?? '') ?>">⚠ ny transkription behövs</span>
+        <?php elseif ($r['applicerad']): ?>
           <span class="chip applicerad">applicerad</span>
         <?php elseif ($r['flaggor'] === null): ?>
           <span class="chip ingen">ej flaggad</span>

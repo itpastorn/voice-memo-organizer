@@ -158,6 +158,17 @@ resten fungerar som vanligt.
 Valet skrivs till `granska/current.json`, och `applicera-corrections.py` följer det —
 annars vore väljaren en fälla: granska fil X, applicera fil Y.
 
+**Märk "ny transkription behövs"** när transkriptionen inte duger — t.ex. ett memo
+på engelska, där KB-Whisper *översätter* i stället för att transkribera. Knappen
+finns i granskningsvyn; märkningen sparas i `granska/status.json` (versionerad),
+syns i väljaren och gör att `batch-flagga.py` hoppar över filen. Ingen mening att
+flagga ord i en text som ska göras om.
+
+Transkriberar du om en fil: **ta bort dess `-corrections.*`, `-bak*.json` och kopian
+i `granska/state/` först.** De indexerar den gamla texten. `transkribera.py` varnar
+om de finns, och `applicera-corrections.py` vägrar när sidecarens ordantal inte
+stämmer med källan.
+
 Källan (`/data`) monteras i **läsläge**; GUI:t skriver en arbetskopia av besluten i
 `granska/state/`. Rätta i webbläsaren:
 

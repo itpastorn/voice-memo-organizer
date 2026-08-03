@@ -69,7 +69,22 @@ def redan_flaggad(p: Path) -> bool:
             or p.with_name(f"{p.stem}-corrections.json").exists())
 
 
+def markta_for_omtranskribering(root: Path) -> set[str]:
+    """Filer som märkts i GUI:t som 'ny transkription behövs' — t.ex. memon på
+    annat språk än modellen, där resultatet blir en översättning i stället för en
+    transkription. Att flagga ord i en sådan text är bortkastade pengar."""
+    p = PROJECT_ROOT / "granska" / "status.json"
+    if not p.is_file():
+        return set()
+    try:
+        alla = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return set()
+    return {rel for rel, v in alla.items() if v.get("status") == "ny-transkription"}
+
+
 def upptack(root: Path, n: int | None) -> list[Path]:
+    markta = markta_for_omtranskribering(root)
     filer = []
     for p in root.rglob("*.json"):
         if not p.is_file() or not ar_transkript(p):
@@ -77,6 +92,10 @@ def upptack(root: Path, n: int | None) -> list[Path]:
         if {x.lower() for x in p.relative_to(root).parts} & EXCLUDE_DIRS:
             continue
         if redan_flaggad(p):
+            continue
+        if p.relative_to(root).as_posix() in markta:
+            print(f"  hoppar över (ny transkription behövs): "
+                  f"{p.relative_to(root).as_posix()}", file=sys.stderr)
             continue
         filer.append(p)
     filer.sort(key=lambda p: p.stat().st_mtime, reverse=True)   # nyaste först

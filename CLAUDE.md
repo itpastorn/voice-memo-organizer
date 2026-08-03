@@ -215,6 +215,27 @@ uppskattar kostnaden vid `--dry-run`, och är idempotent. Avbryter hela batchen 
 ingen bit går igenom — annars lämnas kön halvflaggad vid slut på API-krediter,
 vilket redan hänt en gång. Rör inte `current.json`.
 
+**Filstatus "ny transkription behövs".** `zego-josh-hawley-jonathan-edwards`
+talades in på **engelska**. KB-Whisper är tränad för svenska och **översatte** i
+stället för att transkribera — resultatet är flytande svenska som inte är vad som
+sägs i ljudet. Ingenting fångade det automatiskt: ord-konfidensen låg på 0,686 mot
+normala 0,70–0,76, och `config.toml` sätter `language = "sv"`, så JSON:ens
+`language_probability: 1` betyder ingenting. Det krävs ett mänskligt märke.
+
+Knappen finns i granskningsvyn; märkningen bor i **`granska/status.json`**, som är
+versionerad — `granska/state/` är gitignorerad och `/data` monteras read-only med
+flit. Märkta filer syns i väljaren och hoppas över av `batch-flagga.py`.
+
+**Omtranskribering är farligare än det ser ut.** Härledda filer från förra körningen
+(`-corrections.*`, `-bak*.json`, kopian i `state/`) indexerar den GAMLA texten. Två
+skydd finns, och de täcker olika saker:
+
+- `applicera-corrections.py` jämför sidecarens `word_count` med källans ordantal och
+  vägrar vid avvikelse — fångar sidecars som blivit ogiltiga.
+- `transkribera.py` varnar när härledda filer redan finns — fångar det
+  ordantalskontrollen *inte* ser: att `-bak.json` från förra körningen skulle få
+  apply att läsa den gamla texten som källa.
+
 **Filväljaren (`granska/valj.php`) är GUI:ts ingång.** Den listar alla
 transkriptioner i datamappen, senaste först (`generated_at`, annars filens
 ändringstid för äldre försök), med filter på temamapp och filnamn. Kom till när
