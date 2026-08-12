@@ -31,28 +31,9 @@ def las(path: Path) -> dict:
         return {}
 
 
-def hitta_sidecar(json_path: Path) -> tuple[Path | None, int, str]:
-    """Samma val som applicera-corrections.py: senaste rundan vinner, och
-    arbetskopian i granska/state/ går före fröet i datamappen."""
-    state_dir = PROJECT_ROOT / "granska" / "state"
-    for namn, runda in ((f"{json_path.stem}-corrections-2.json", 2),
-                        (f"{json_path.stem}-corrections.json", 1)):
-        for kandidat, var in ((state_dir / namn, "arbetskopia i granska/state/"),
-                              (json_path.with_name(namn), "frö i datamappen")):
-            if kandidat.is_file():
-                return kandidat, runda, var
-    return None, 0, ""
-
-
 def status_markning(cfg: dict, json_path: Path) -> str | None:
     """"Ny transkription behövs"-märkningen ur granska/status.json."""
-    alla = las(PROJECT_ROOT / "granska" / "status.json")
-    try:
-        rel = k.rel_to_root(cfg, json_path)
-    except ValueError:
-        rel = json_path.name
-    v = alla.get(rel) or next(
-        (v for r, v in alla.items() if Path(r).name == json_path.name), None)
+    v = k.status_for(cfg, json_path)
     if not v or v.get("status") != "ny-transkription":
         return None
     return "ny transkription behövs" + (f" — {v['note']}" if v.get("note") else "")
@@ -79,14 +60,14 @@ def main() -> int:
           if langd else f"Ord:      {ord_antal}")
 
     print()
-    sidecar, runda, var = hitta_sidecar(json_path)
+    sidecar, runda, var = k.valj_sidecar(json_path)
     if sidecar is None:
         print("Flaggning: ingen sidecar — kör batch-flagga.py, eller öppna filen "
               "i väljaren och rätta för hand.")
     else:
         side = las(sidecar)
         flaggor = side.get("flags", [])
-        kvar = sum(1 for f in flaggor if (f.get("decision") or "pending") == "pending")
+        kvar = k.antal_ogranskade(side)
         print(f"Sidecar:   {sidecar.name} (runda {runda}, {var})")
         print(f"Flaggor:   {len(flaggor)}, varav {kvar} ogranskade"
               + (f", {len(side.get('phrase_edits', []))} fraser" if side.get("phrase_edits") else "")

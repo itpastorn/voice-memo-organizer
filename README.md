@@ -60,10 +60,18 @@ transkription behövs** i sidopanelen.
 ```bash
 "$PY" aktuell.py                  # vilken fil är vald? (skriver ingenting)
 "$PY" applicera-corrections.py    # följer filen du valt i GUI:t
+
+"$PY" batch-applicera.py --dry-run   # alla färdiggranskade på en gång
+"$PY" batch-applicera.py
 ```
 
 `aktuell.py` svarar på frågan som annars kräver att GUI:t är igång: vilken fil
 står på tur, hur många flaggor är ogranskade, är den redan applicerad.
+
+Har du granskat en hel omgång är `batch-applicera.py` vägen: den tar alla filer
+som är färdiggranskade och ännu inte applicerade. `--dry-run` räknar igenom allt
+och skriver ingenting — siffrorna är riktiga, inte uppskattade, så du ser exakt
+vad som skulle ändras innan något rörs.
 
 ### 5. Läsbar text (steg c)
 
@@ -81,6 +89,7 @@ i config.toml. `aktuell.py` visar valet i förväg.
 | Vill du... | Gör så |
 | --- | --- |
 | veta vilken fil som är vald | `aktuell.py` — fil, mapp, flaggor kvar, applicerad eller ej |
+| applicera många filer på en gång | `batch-applicera.py` — hoppar över ogranskade, märkta och redan applicerade |
 | köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `transkribera.py` |
 | granska en fil som saknar flaggning | öppna den ändå i väljaren, klicka valfritt ord |
 | leta subtila fel en gång till | `granska-igen.py` (Claude Fable, ~$4/fil — sällan behövt) |

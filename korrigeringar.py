@@ -92,6 +92,119 @@ def rel_to_root(cfg: dict, path: Path) -> str:
     return rel.as_posix()
 
 
+# --------------------------------------------------------------------------- #
+# Transkript, sidecars och filstatus
+#
+# Reglerna nedan fanns tidigare i två eller tre exemplar var (apply, aktuell,
+# batch-flagga, och i PHP i valj.php). De MÅSTE ge samma svar överallt: väljer
+# GUI:t en sidecar och apply en annan, granskar man fil X och skriver in
+# besluten i fil Y.
+# --------------------------------------------------------------------------- #
+
+EXCLUDE_DIRS = {"test", "sammanfatta"}          # utanför projektet, se CLAUDE.md
+
+# Härledda filer som ligger bland transkripten men inte ÄR transkript.
+# Både -bak.json (nuvarande konvention) och .bak.json (legacy i
+# andra-ideer-.../transcripts/json/) måste bort.
+HARLEDDA_MARKORER = ("-corrections", "-bak.json", ".bak.json",
+                     "-bak2.json", ".bak2.json")
+
+
+def ar_transkript(namn: str) -> bool:
+    """Är filnamnet ett transkript, och inte en sidecar eller en backup?
+    Speglar granska/valj.php:75-83 — listan i GUI:t och batchernas kö ska
+    innehålla samma filer."""
+    if not namn.endswith(".json"):
+        return False
+    return not any(m in namn for m in HARLEDDA_MARKORER)
+
+
+def iter_transkript(root: Path):
+    """Alla transkript under datamappens rot, utom test/ och sammanfatta/."""
+    for p in root.rglob("*.json"):
+        if not ar_transkript(p.name):
+            continue
+        if {d.lower() for d in p.relative_to(root).parts[:-1]} & EXCLUDE_DIRS:
+            continue
+        yield p
+
+
+def valj_sidecar(json_path: Path) -> tuple[Path | None, int, str]:
+    """Sidecarn för ett transkript: (sökväg, runda, varifrån den kom).
+
+    Två regler, i ordning: senaste rundan vinner (runda 2 före runda 1), och
+    arbetskopian i granska/state/ går före fröet i datamappen — /data monteras
+    read-only, så GUI:ts beslut finns bara i arbetskopian.
+
+    Rundan läses ur filnamnet, inte ur sidecarens `runda`-fält: en
+    -corrections-2.json utan fältet är ändå runda 2, och basvalet i apply följer
+    filnamnet. (None, 0, "") när ingen sidecar finns."""
+    state_dir = PROJECT_ROOT / "granska" / "state"
+    for namn, runda in ((f"{json_path.stem}-corrections-2.json", 2),
+                        (f"{json_path.stem}-corrections.json", 1)):
+        for kandidat, var in ((state_dir / namn, "arbetskopia i granska/state/"),
+                              (json_path.with_name(namn), "frö i datamappen")):
+            if kandidat.is_file():
+                return kandidat, runda, var
+    return None, 0, ""
+
+
+def las_status(cfg: dict) -> dict[str, dict]:
+    """granska/status.json rått: relativ posix-sökväg -> {status, note, satt}.
+    Tom dict om filen saknas eller inte går att tolka."""
+    p = PROJECT_ROOT / "granska" / "status.json"
+    if not p.is_file():
+        return {}
+    try:
+        alla = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return alla if isinstance(alla, dict) else {}
+
+
+def status_for(cfg: dict, json_path: Path,
+               alla: dict | None = None) -> dict | None:
+    """Statusposten för ett transkript, eller None.
+
+    Matchar på sökvägen relativt datamappens rot — formatet GUI:t skriver.
+    Filnamnsfallbacken finns för poster skrivna innan temamapparna kom med, men
+    exakt sökväg går först: två memon kan heta samma sak i olika temamappar, och
+    då vore filnamnsmatchning fel fil.
+
+    `alla` låter en batch läsa status.json en gång i stället för per fil."""
+    if alla is None:
+        alla = las_status(cfg)
+    if not alla:
+        return None
+    try:
+        rel = rel_to_root(cfg, json_path)
+    except ValueError:
+        rel = None
+    if rel and rel in alla:
+        return alla[rel]
+    return next((v for r, v in alla.items()
+                 if Path(r).name == json_path.name), None)
+
+
+def antal_ogranskade(side: dict) -> int:
+    """Flaggor som ännu inte fått ett beslut. Saknat eller tomt `decision`
+    räknas som ogranskat — strängare än granska/valj.php, som bara räknar
+    decision === 'pending'. Skillnaden syns bara i handskrivna sidecars, och när
+    en batch ska SKRIVA är det konservativa valet rätt."""
+    return sum(1 for f in side.get("flags", [])
+               if not (f.get("decision") or "").strip()
+               or f.get("decision") == "pending")
+
+
+def antal_operationer(side: dict) -> int:
+    """Hur mycket sidecaren faktiskt skulle ändra. En sidecar utan operationer
+    är inte värd en apply: den enda effekten vore en corrections_applied_at-
+    stämpel, som får väljaren att visa 'applicerad' för en fil ingen granskat."""
+    return (len(side.get("flags", []))
+            + len(side.get("phrase_edits", []))
+            + len(side.get("insertions", [])))
+
+
 ORDLISTA_DIR = PROJECT_ROOT / "ordlista"
 
 

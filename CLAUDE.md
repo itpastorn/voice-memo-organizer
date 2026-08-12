@@ -41,8 +41,12 @@ en egenskap hos ljudet och modellen, inte hos domänen. Detektorn klarade tre
 domäner där ordlistan var helt tom, så en ny temamapp kräver ingen
 listinvestering innan pipelinen fungerar.
 
-Testfilen står fortfarande i `data.test_file` och byts för hand. Batch finns för
-steg a; steg b och c körs en fil i taget.
+**Tio filer till är granskade och applicerade** (Kirk-TPUSA-mappen, 2026-08-13),
+men har ännu inte gått genom steg c.
+
+Batch finns för steg a, b och apply. Steg c körs fortfarande en fil i taget, och
+`data.test_file` byts för hand — men bara steg a läser den numera, allt efter
+granskningen följer GUI:ts filval (`aktuell.py` visar vilken det är).
 
 **Kvar av arkivet: ~348 av 355 ljudfiler.** Det är den stora återstående
 kostnaden, och den blockeras av issue #9 (se Körning).
@@ -225,6 +229,22 @@ normala 0,70–0,76, och `config.toml` sätter `language = "sv"`, så JSON:ens
 Knappen finns i granskningsvyn; märkningen bor i **`granska/status.json`**, som är
 versionerad — `granska/state/` är gitignorerad och `/data` monteras read-only med
 flit. Märkta filer syns i väljaren och hoppas över av `batch-flagga.py`.
+
+**Batch för apply:** `batch-applicera.py` skriver in besluten i alla filer som är
+färdiggranskade och ännu inte applicerade. `applicera-corrections.py` tar en fil,
+den GUI:t pekar ut — efter en batchtranskribering ligger tiotals granskade filer
+och väntar, och att välja dem en och en är rent klickarbete. Delad kod: apply har
+brutits ut till `applicera_en(json_path, sidecar_path=, torrkorning=)`, som båda
+vägarna anropar. `--dry-run` gör hela beräkningen och låter varje vakt smälla men
+skriver ingenting, så siffrorna är riktiga och inte uppskattade.
+
+Fyra vakter, i den ordning de träffar: filer märkta "ny transkription behövs"
+avvisas alltid; sidecarens `word_count` måste stämma med källans ordantal; alla
+ordindex måste ligga inom källan (den vakten är den **enda** som finns för
+sidecars som `granska/index.php` skapat tomma — de bär inget `word_count`); och
+en fil som är applicerad men saknar `-bak.json` avvisas, eftersom apply annars
+skulle läsa den redan rättade texten som bas och förskjuta varje index efter
+första raderingen.
 
 **Omtranskribering är farligare än det ser ut.** Härledda filer från förra körningen
 (`-corrections.*`, `-bak*.json`, kopian i `state/`) indexerar den GAMLA texten. Två

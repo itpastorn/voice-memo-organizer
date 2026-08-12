@@ -29,7 +29,6 @@ from pathlib import Path
 import korrigeringar as k
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-EXCLUDE_DIRS = {"test", "sammanfatta"}
 
 # Priser per miljon tokens för corrections.llm_modell (claude-opus-4-8).
 PRIS_IN, PRIS_UT = 5.0, 25.0
@@ -54,14 +53,6 @@ fl = ladda("flagga-llm")
 mig = ladda("migrera-corrections")
 
 
-def ar_transkript(p: Path) -> bool:
-    if p.suffix != ".json":
-        return False
-    n = p.name
-    return not any(m in n for m in
-                   ("-corrections", "-bak.json", ".bak.json", "-bak2.json", ".bak2.json"))
-
-
 def redan_flaggad(p: Path) -> bool:
     """Flaggad = har .txt eller sidecar. Räcker för idempotens och skyddar
     handredigeringar från att skrivas över."""
@@ -69,31 +60,17 @@ def redan_flaggad(p: Path) -> bool:
             or p.with_name(f"{p.stem}-corrections.json").exists())
 
 
-def markta_for_omtranskribering(root: Path) -> set[str]:
-    """Filer som märkts i GUI:t som 'ny transkription behövs' — t.ex. memon på
-    annat språk än modellen, där resultatet blir en översättning i stället för en
-    transkription. Att flagga ord i en sådan text är bortkastade pengar."""
-    p = PROJECT_ROOT / "granska" / "status.json"
-    if not p.is_file():
-        return set()
-    try:
-        alla = json.loads(p.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return set()
-    return {rel for rel, v in alla.items() if v.get("status") == "ny-transkription"}
-
-
-def upptack(root: Path, n: int | None) -> list[Path]:
-    markta = markta_for_omtranskribering(root)
+def upptack(cfg: dict, root: Path, n: int | None) -> list[Path]:
+    """Filer som saknar flaggning. Märkta filer ('ny transkription behövs' —
+    t.ex. memon på annat språk än modellen, där resultatet blir en översättning)
+    hoppas över: att flagga ord i en sådan text är bortkastade pengar."""
+    status = k.las_status(cfg)
     filer = []
-    for p in root.rglob("*.json"):
-        if not p.is_file() or not ar_transkript(p):
-            continue
-        if {x.lower() for x in p.relative_to(root).parts} & EXCLUDE_DIRS:
-            continue
+    for p in k.iter_transkript(root):
         if redan_flaggad(p):
             continue
-        if p.relative_to(root).as_posix() in markta:
+        st = k.status_for(cfg, p, status)
+        if st and st.get("status") == "ny-transkription":
             print(f"  hoppar över (ny transkription behövs): "
                   f"{p.relative_to(root).as_posix()}", file=sys.stderr)
             continue
@@ -186,7 +163,7 @@ def main() -> int:
                 continue
             mal.append(p)
     else:
-        mal = upptack(root, antal)
+        mal = upptack(cfg, root, antal)
 
     if not mal:
         print("Inget att flagga — alla transkriptioner har redan .txt eller sidecar.")
