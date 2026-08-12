@@ -11,6 +11,8 @@
 //
 // Klick skriver current.json och skickar vidare till index.php.
 
+require_once __DIR__ . '/gemensam.php';
+
 $here = __DIR__;
 $dataDir = getenv('DATA_DIR') ?: '/data';
 
@@ -113,7 +115,7 @@ foreach ($it as $fil) {
     if ($work !== null && is_file($work)) {
         $s = json_decode(file_get_contents($work), true) ?: [];
         $flaggor = count($s['flags'] ?? []);
-        $kvar = count(array_filter($s['flags'] ?? [], fn($f) => ($f['decision'] ?? '') === 'pending'));
+        $kvar = rakna_beslut($s)['pending'];
     } elseif ($seed !== null) {
         $s = json_decode(file_get_contents("$dataDir/$seed"), true) ?: [];
         $flaggor = count($s['flags'] ?? []);

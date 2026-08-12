@@ -109,8 +109,8 @@ function pill_html(string $word): string {
     return '<span class="pill">&#8248;' . htmlspecialchars($word) . '</span>';
 }
 
-$decCount = ['replace' => 0, 'delete' => 0, 'accept' => 0, 'osaker' => 0, 'pending' => 0];
-foreach ($side['flags'] as $f) { $decCount[$f['decision']] = ($decCount[$f['decision']] ?? 0) + 1; }
+require_once __DIR__ . '/gemensam.php';
+$decCount = rakna_beslut($side);
 $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
 ?>
 <!doctype html>
@@ -548,10 +548,17 @@ let savedT=null;
 function flashSaved(){ savedEl.classList.add('show'); clearTimeout(savedT);
   savedT=setTimeout(()=>savedEl.classList.remove('show'), 900); }
 
+// Ett ord som täcks av en fras är avgjort: frasen ÄR beslutet, och apply hoppar
+// över ordflaggan för varje index i ett frasspan. Utan detta stannar n-tangenten
+// på ord som redan är rättade, och de ser dessutom gröna ut (.inphrase målar
+// över .d-pending) — alltså en flagga man letar efter men aldrig hittar.
+function iFras(i){ return PHRASES.some(p=>p.span_start<=i && i<=p.span_end); }
+function arPending(i){ return FLAGS[i] && FLAGS[i].decision==='pending' && !iFras(i); }
+
 function advance(){
   // Nästa kvarvarande (pending) flagga efter fokus; annars första pending; annars stanna.
-  const after=ORDER.filter(i=>i>focus && FLAGS[i].decision==='pending');
-  const any=ORDER.filter(i=>FLAGS[i].decision==='pending');
+  const after=ORDER.filter(i=>i>focus && arPending(i));
+  const any=ORDER.filter(i=>arPending(i));
   if(after.length) setFocus(after[0]);
   else if(any.length) setFocus(any[0]);
   else pbody.innerHTML='<b>Alla flaggor gjorda 🎉</b><p class="hint">Klicka ett ord för att ändra, eller stäng.</p>';

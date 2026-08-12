@@ -186,14 +186,34 @@ def status_for(cfg: dict, json_path: Path,
                  if Path(r).name == json_path.name), None)
 
 
+def fras_tackta(side: dict) -> set[int]:
+    """Ordindex som ligger inom en frasersättning.
+
+    Fraser utan span hoppas över: `migrera-corrections.py` lämnar stubbar för
+    rader den inte kunde binda till ordindex, och apply filtrerar bort dem på
+    samma villkor."""
+    tackta: set[int] = set()
+    for p in side.get("phrase_edits", []):
+        if "span_start" in p and "span_end" in p:
+            tackta.update(range(p["span_start"], p["span_end"] + 1))
+    return tackta
+
+
 def antal_ogranskade(side: dict) -> int:
     """Flaggor som ännu inte fått ett beslut. Saknat eller tomt `decision`
     räknas som ogranskat — strängare än granska/valj.php, som bara räknar
     decision === 'pending'. Skillnaden syns bara i handskrivna sidecars, och när
-    en batch ska SKRIVA är det konservativa valet rätt."""
+    en batch ska SKRIVA är det konservativa valet rätt.
+
+    Ord som täcks av en fras räknas INTE, hur flaggan än ser ut: frasen ÄR
+    beslutet. Apply hoppar över ordflaggan för varje index i ett frasspan, så en
+    'kvar'-flagga där har ingen verkan — men den fick filen att se ogranskad ut
+    och höll den utanför batchen i onödan."""
+    tackta = fras_tackta(side)
     return sum(1 for f in side.get("flags", [])
-               if not (f.get("decision") or "").strip()
-               or f.get("decision") == "pending")
+               if f.get("global_index") not in tackta
+               and (not (f.get("decision") or "").strip()
+                    or f.get("decision") == "pending"))
 
 
 def antal_operationer(side: dict) -> int:

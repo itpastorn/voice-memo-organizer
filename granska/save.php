@@ -102,8 +102,8 @@ fflush($fp);
 flock($fp, LOCK_UN);
 fclose($fp);
 
-$c = ['replace' => 0, 'delete' => 0, 'accept' => 0, 'osaker' => 0, 'pending' => 0];
-foreach ($side['flags'] as $f) { $c[$f['decision']] = ($c[$f['decision']] ?? 0) + 1; }
+require_once __DIR__ . '/gemensam.php';
+$c = rakna_beslut($side);
 $structPhrases = 0; foreach ($side['phrase_edits'] as $p) { if (isset($p['span_start'])) $structPhrases++; }
 $structInserts = 0; foreach ($side['insertions'] as $i) { if (isset($i['after_index'])) $structInserts++; }
 
