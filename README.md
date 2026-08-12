@@ -58,8 +58,12 @@ transkription behövs** i sidopanelen.
 ### 4. Skriv in besluten
 
 ```bash
+"$PY" aktuell.py                  # vilken fil är vald? (skriver ingenting)
 "$PY" applicera-corrections.py    # följer filen du valt i GUI:t
 ```
+
+`aktuell.py` svarar på frågan som annars kräver att GUI:t är igång: vilken fil
+står på tur, hur många flaggor är ogranskade, är den redan applicerad.
 
 ### 5. Läsbar text (steg c)
 
@@ -72,10 +76,11 @@ transkription behövs** i sidopanelen.
 
 Steg 4 och 5 arbetar alla på **den fil du valt i GUI:t** (`granska/current.json`),
 och skriver ut vilken det blev. Har du inte valt någon används `data.test_file`
-i config.toml.
+i config.toml. `aktuell.py` visar valet i förväg.
 
 | Vill du... | Gör så |
 | --- | --- |
+| veta vilken fil som är vald | `aktuell.py` — fil, mapp, flaggor kvar, applicerad eller ej |
 | köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `transkribera.py` |
 | granska en fil som saknar flaggning | öppna den ändå i väljaren, klicka valfritt ord |
 | leta subtila fel en gång till | `granska-igen.py` (Claude Fable, ~$4/fil — sällan behövt) |
