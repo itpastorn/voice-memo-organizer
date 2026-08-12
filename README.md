@@ -78,7 +78,15 @@ vad som skulle ändras innan något rörs.
 ```bash
 "$PY" forbattra.py         # -> <namn>.md
 "$PY" negationsvakt.py     # larmar om en negation tappats
+
+"$PY" batch-forbattra.py --dry-run   # alla applicerade filer + kostnad
+"$PY" batch-forbattra.py             # kör steg c OCH negationsvakten per fil
 ```
+
+Steg c kostar pengar (~**$0,01 per ljudminut**, uppmätt), så batchen visar alltid
+kostnaden först och `--dry-run` gör inget annat. Negationsvakten körs automatiskt
+efter varje fil — den är gratis och är hela skyddet mot att städningen gör en
+tappad negation osynlig.
 
 **Kör om steg c** efter varje ny apply — `.md` är ett derivat av JSON:en.
 

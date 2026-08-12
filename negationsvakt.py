@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from pathlib import Path
 
 import korrigeringar as k
 
@@ -61,31 +62,32 @@ def md_block(md_text: str) -> list[tuple[float, str]]:
     return block
 
 
-def main() -> int:
-    cfg = k.load_config()
-    json_path, vald_via = k.aktuell_json(cfg)
-    md_path = json_path.with_suffix(".md")
+class VaktFel(Exception):
+    """Kontrollen gick inte att göra (saknad fil, tom JSON, ingen markdown)."""
 
+
+def kontrollera(json_path: Path) -> tuple[int, list[str]]:
+    """(antal block, avvikelserader) för en fil. Skriver ingenting.
+
+    Kastar VaktFel när underlaget saknas — det är något annat än att kontrollen
+    hittade en avvikelse, och en batch måste kunna skilja dem åt."""
+    json_path = Path(json_path)
+    md_path = json_path.with_suffix(".md")
     if not json_path.is_file():
-        print(f"FEL: JSON saknas: {json_path}", file=sys.stderr)
-        return 2
+        raise VaktFel(f"JSON saknas: {json_path}")
     if not md_path.is_file():
-        print(f"FEL: markdown saknas: {md_path} — kör forbattra.py (steg c) först.",
-              file=sys.stderr)
-        return 2
+        raise VaktFel(f"markdown saknas: {md_path.name} — kör steg c först.")
 
     data = json.loads(json_path.read_text(encoding="utf-8"))
     segments = data.get("segments", [])
     if not segments:
-        print("FEL: JSON saknar segment.", file=sys.stderr)
-        return 2
+        raise VaktFel(f"{json_path.name} saknar segment.")
 
     block = md_block(md_path.read_text(encoding="utf-8"))
     if not block:
-        print("FEL: inga **[hh:mm:ss]**-markörer i markdown-filen.", file=sys.stderr)
-        return 2
+        raise VaktFel(f"inga **[hh:mm:ss]**-markörer i {md_path.name}.")
 
-    avvikelser = 0
+    rader: list[str] = []
     for i, (start, text) in enumerate(block):
         # Blockets tidsfönster: [blockstart, nästa blockstart). Sista blocket
         # sträcker sig till ljudets slut. Markörens tid är avrundad till hel
@@ -98,17 +100,30 @@ def main() -> int:
         n_kalla = rakna(kalla)
         n_md = rakna(text)
         if n_kalla != n_md:
-            avvikelser += 1
             h, rest = divmod(int(start), 3600)
             mi, s_ = divmod(rest, 60)
-            print(f"[{h:02d}:{mi:02d}:{s_:02d}]  källa {n_kalla} negation(er), "
-                  f"md {n_md} — kontrollera blocket")
+            rader.append(f"[{h:02d}:{mi:02d}:{s_:02d}]  källa {n_kalla} negation(er), "
+                         f"md {n_md} — kontrollera blocket")
+    return len(block), rader
+
+
+def main() -> int:
+    cfg = k.load_config()
+    json_path, vald_via = k.aktuell_json(cfg)
+    try:
+        antal_block, avvikelser = kontrollera(json_path)
+    except VaktFel as e:
+        print(f"FEL: {e}", file=sys.stderr)
+        return 2
+
+    for rad in avvikelser:
+        print(rad)
 
     print()
-    print(f"Jämförde {len(block)} block i {md_path.name} mot {json_path.name}")
+    print(f"Jämförde {antal_block} block i {json_path.stem}.md mot {json_path.name}")
     print(f"Fil vald via: {vald_via}")
     if avvikelser:
-        print(f"{avvikelser} block avviker — varje polaritetsändring ska vara ett "
+        print(f"{len(avvikelser)} block avviker — varje polaritetsändring ska vara ett "
               "medvetet beslut. Falska positiva förekommer (ihopslagna meningar, "
               "raderat icke-innehåll).")
         return 1

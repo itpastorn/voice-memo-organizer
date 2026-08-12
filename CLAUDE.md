@@ -41,12 +41,17 @@ en egenskap hos ljudet och modellen, inte hos domänen. Detektorn klarade tre
 domäner där ordlistan var helt tom, så en ny temamapp kräver ingen
 listinvestering innan pipelinen fungerar.
 
-**Tio filer till är granskade och applicerade** (Kirk-TPUSA-mappen, 2026-08-13),
-men har ännu inte gått genom steg c.
+**Tio filer till har gått a → c** (Kirk-TPUSA-mappen, 2026-08-13). Totalt alltså
+16 filer hela vägen. Negationsvakten gav sitt **första verkliga utslag** i den
+omgången: steg c tappade *och inte* i `zego-trump-forlatelse-2` och vände därmed
+en sats. Av fem flaggade block var ett verkligt tapp, ett en korrekt städad
+stamning (*"inte... inte längre"* → *"inte längre"*), och ett en rekonstruktion av
+obegriplig text. Kvoten motiverar vakten: den är gratis och fångar det ingen
+LLM-självgranskning skulle se.
 
-Batch finns för steg a, b och apply. Steg c körs fortfarande en fil i taget, och
-`data.test_file` byts för hand — men bara steg a läser den numera, allt efter
-granskningen följer GUI:ts filval (`aktuell.py` visar vilken det är).
+Batch finns för **alla** körbara steg: a, b, apply och c. `data.test_file` byts
+för hand men läses numera bara av steg a — allt efter granskningen följer GUI:ts
+filval (`aktuell.py` visar vilken det är).
 
 **Kvar av arkivet: ~348 av 355 ljudfiler.** Det är den stora återstående
 kostnaden, och den blockeras av issue #9 (se Körning).
@@ -336,6 +341,30 @@ Producerar två nya filer med egna namn (originalen bevaras):
 - **`*.md`** — markdown med underrubriker och listor där innehållet motiverar det.
   Tidsangivelser sätts ut per **block**, inte per mening, som `[00:04:12]` före
   varje avsnitt. Ett block ska gå att slå upp i ljudfilen.
+
+**Batch:** `batch-forbattra.py` kör steg c över alla applicerade filer som saknar
+`.md`, och **negationsvakten direkt efter varje fil** — den är gratis, och att köra
+den för hand tio gånger vore samma klickarbete batchen finns för att slippa.
+Uppskattar kostnaden först; `--dry-run` gör inget annat.
+
+**Kostnaden är uppmätt (2026-08-13, `claude-opus-4-8`): ~$0,010 per ljudminut.**
+Tio filer, 87 ljudminuter, 23 anrop: $0,90 utfall mot $0,85 uppskattat. Underlaget
+till uppskattningen, som konstanter i batchen: **2,13 tecken per token** på svensk
+prompttext (mätt med `count_tokens` över 128k tecken — den engelska tumregeln 3,3
+underskattade med en tredjedel), **766 tokens** schema-overhead per anrop, och
+utdata **0,355×** indata inklusive adaptiv thinking. Hela arkivet blir ~$45.
+
+En bit som misslyckas ger inte längre en halv `.md`. Ett tapp på 90 segment mitt
+i filen syns inte i utdatan, och negationsvakten skulle larma på hela luckan utan
+att förklara varför — därför skrivs ingen `.md` alls när en bit fallerar.
+
+**Steg c rättar transkriptionsfel som steg b missade.** Uppmätt i
+`kirk-owens-posobiec`: *koncentrationsjuristerna* → konspirationsteoretikerna,
+*Sobiek/Colbieks/Sovjet* → Posobiec, *Trilling Pont New Day* → Turning Point.
+Utfallet är rätt, men det betyder att `.md` och `.json` skiljer sig i **innehåll**
+och inte bara i putsning — JSON:en, sanningskällan, bär kvar felen. Det är ett
+argument för att steg d och e indexerar `.md`:n, och en påminnelse om att
+`-borttaget.txt` inte är det enda som behöver ögon.
 
 **Negationsvakt (`negationsvakt.py`, issue #4).** Steg c:s risk är att städningen
 gör tappade negationer osynliga — flytande text ser rätt ut, och en LLM som
