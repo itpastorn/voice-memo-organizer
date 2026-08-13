@@ -225,6 +225,44 @@ def antal_operationer(side: dict) -> int:
             + len(side.get("insertions", [])))
 
 
+# --------------------------------------------------------------------------- #
+# Ordnormalisering
+#
+# Whisper-tokens bär sina egna mellanslag och sin interpunktion ('  innehåll.'),
+# medan allt som jämför ord — verifiering i runda 2, propagering av rättelser —
+# vill åt själva ordet. Att jämföra råa tokens ger falska avvikelser.
+# --------------------------------------------------------------------------- #
+
+SKILJETECKEN = '.,!?;:"\'”“’‘…—–()[]'
+
+
+def karna(s: str) -> str:
+    """Ordet utan omgivande blanksteg och skiljetecken."""
+    return s.strip().strip(SKILJETECKEN)
+
+
+def normalisera_ord(w: str) -> str:
+    """Jämförbar nyckel: gemener, ASCII-vikning (å/ä→a, ö→o), bara a-z0-9.
+    Whisper stavar samma namn med och utan accent, och versaler säger inget om
+    ordet — 'Kerps' och 'kerps.' ska ge samma nyckel."""
+    w = unicodedata.normalize("NFKD", w).encode("ascii", "ignore").decode("ascii")
+    return "".join(c for c in w.lower() if c.isalnum() and c.isascii())
+
+
+# Svenska böjningsändelser, längst först så 'ens' inte kapas som 's'.
+_ANDELSER = ("ens", "ers", "arna", "erna", "orna", "ar", "er", "en", "et", "s")
+
+
+def grundform(w: str) -> str:
+    """Ordet utan svensk böjningsändelse. Grovt med flit: 'Kirk' och 'Kirks'
+    ska falla samman, och en felaktig kapning kostar bara att två ord jämförs
+    på sin gemensamma stam. Kapar aldrig så att färre än tre tecken blir kvar."""
+    for slut in _ANDELSER:
+        if len(w) - len(slut) >= 3 and w.endswith(slut):
+            return w[: -len(slut)]
+    return w
+
+
 ORDLISTA_DIR = PROJECT_ROOT / "ordlista"
 
 

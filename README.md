@@ -55,6 +55,22 @@ Väljaren listar alla filer, senaste överst. Klicka en → rätta med `n` (näs
 Duger transkriptionen inte alls — t.ex. memo på engelska — tryck **Märk: ny
 transkription behövs** i sidopanelen.
 
+### 3b. Låt rättelserna hitta sina syskon (frivilligt)
+
+```bash
+"$PY" propagera-namn.py --dry-run     # visa förslagen
+"$PY" propagera-namn.py               # lägg dem som nya flaggor
+```
+
+Detektorn ser ord, inte dokument: samma namn förvanskas olika många gånger och
+bara någon variant flaggas. När du rättat `Vertobius` → `Posobiec` letar det här
+skriptet upp de **orättade** varianterna längre fram i samma fil. Deterministiskt,
+inga API-anrop, och det applicerar aldrig — allt blir nya `pending`-flaggor som du
+avgör i GUI:t. Kör om GUI:t efteråt.
+
+Räkna med **ungefär ett förslag per fil**, ofta noll. Ungefär hälften är riktiga
+fynd; resten kostar ett tangenttryck. Justera med `--troskel=` (lägre = fler).
+
 ### 4. Skriv in besluten
 
 ```bash

@@ -224,6 +224,52 @@ uppskattar kostnaden vid `--dry-run`, och är idempotent. Avbryter hela batchen 
 ingen bit går igenom — annars lämnas kön halvflaggad vid slut på API-krediter,
 vilket redan hänt en gång. Rör inte `current.json`.
 
+**Propagering av fattade rättelser (`propagera-namn.py`, issue #7).** Detektorn
+bedömer varje ord isolerat, inte dokumentet: samma namn förvanskas olika många
+gånger och bara någon variant flaggas (`Boltz,` gick igenom medan `Bolts`
+fångades). Men när en människa väl rättat `Vertobius` → `Posobiec` är resten
+härledbar utan modell. Skriptet vänder riktningen och letar **orättade
+förekomster av redan rättade fel**. Deterministiskt, inga API-anrop, och det
+applicerar aldrig — allt blir `pending`-flaggor med `note: "propagering"`, vilket
+också är idempotensnyckeln.
+
+**Matchningen mättes, den gissades inte.** `jellyfish` installerades tillfälligt
+för att pröva fonetik på riktigt. Facit: åtta obeslutade varianter i
+`kirk-owens-posobiec` (655 ord, 29 beslut), med totalvolymen över 25 filer som
+brusmått.
+
+| Metod | Tröskel | Mål av 8 | Förslag i filen | Över alla filer |
+| --- | --- | --- | --- | --- |
+| **normaliserat Levenshtein** | **0,62** | **6** | **8** | **22** |
+| Jaro-Winkler | 0,80 | 6 | 9 | 39 |
+| Metaphone | 0,60 | 6 | 17 | 133 |
+| NYSIIS | 0,70 | 6 | 13 | 51 |
+| Soundex | 0,60 | 7 | 19 | 212 |
+| Match Rating | 0,60 | 4 | 12 | 93 |
+
+Levenshtein vann på brus vid samma träffbild. Jaro-Winklers prefixbonus är fel
+sorts likhet här — den föreslog `Charlie`←`chri` och `Krig`←`kristi`. De rent
+fonetiska nycklarna kastar för mycket: `Soundex` fick 212 förslag för 7 träffar.
+`jellyfish` avinstallerades igen; koden använder bara stdlib.
+
+**Två fynd vägde tyngre än metodvalet.** Ankarurvalet: med hela rättelseloggen
+som ankare gav vardagsorden (`vi`→`hon`, `men`→`med`) **140 förslag i en fil om
+655 ord**. Begränsat till namnlika beslut föll det till 11. Och uteslutningen av
+korrekta former måste ske på **grundform**, inte exakt sträng — annars föreslås
+`Trumps` för att bara `Trump` står som rättelse (59 → 34 förslag).
+
+Utfallet i testfilen: 6 av 8 mål, plus `Pont`→`Point` som bonus, en falsk
+(`University`). Missarna är `Colbieks` (0,50) och `Sovjet` (0,43) — för långt från
+sina grundformer, som väntat. **Tröskeln trimmades inte tills alla åtta träffade;
+det vore överanpassning mot en fil.** Över hela materialet: 22 förslag på 57
+filer, ~0,4 per fil, ungefär hälften riktiga fynd.
+
+En absolut gräns på redigeringsavståndet (≤ 2) prövades och förkastades: den kostade
+två riktiga träffar och tog bort nästan inget brus.
+
+Issue #7:s andra hälft — en vakt som larmar när samma namn stavas olika **utan**
+att något beslut finns — är inte byggd. Den kräver klustring av hela ordförrådet.
+
 **Filstatus "ny transkription behövs".** `zego-josh-hawley-jonathan-edwards`
 talades in på **engelska**. KB-Whisper är tränad för svenska och **översatte** i
 stället för att transkribera — resultatet är flytande svenska som inte är vad som
@@ -612,7 +658,7 @@ inte står här.
 | # | Vad | Läge |
 | --- | --- | --- |
 | 5 | Revision-diff (standard vs strict) som extra flaggkälla | idé, väntar |
-| 7 | Konsistensvakt: samma namn förvanskat olika, bara ett flaggat | verklig lucka |
+| 7 | Konsistensvakt: samma namn förvanskat olika, bara ett flaggat | halv — `propagera-namn.py` klar, klustringsvakten kvar |
 | 8 | Väggklockemätningen räknar in sömn; hastigheten oförutsägbar | mätproblem |
 | 9 | Modernt vänteläge stryper nattbatch | **blockerar arkivet** |
 | 10 | Ordlistan per temamapp | ✅ genomförd i denna omgång |

@@ -94,11 +94,7 @@ PAD = 20
 
 # Skiljetecken ignoreras när modellens citerade ord jämförs med transkriptets —
 # Whisper-tokens bär punkt/citattecken ('innehåll.'), modellen citerar ordet bart.
-SKILJETECKEN = '.,!?;:"\'”“’‘…—–()[]'
-
-
-def karna(s: str) -> str:
-    return s.strip().strip(SKILJETECKEN)
+# Skalningen bor i korrigeringar.karna(); propagera-namn.py behöver samma.
 
 
 def build_prompt(words: list[dict], ctx_start: int, ctx_end: int,
@@ -275,7 +271,7 @@ def main() -> int:
             "anchor": round(w["start"], 2) if w["start"] is not None else None,
             "global_index": i,
             "heard": w["word"].strip(),
-            "verify_ok": karna(w["word"]) == karna(f.hort),
+            "verify_ok": k.karna(w["word"]) == k.karna(f.hort),
             "ai_guess": guess,
             "ai_reason": reason,
             "decision": "pending",
