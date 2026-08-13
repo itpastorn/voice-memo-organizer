@@ -12,24 +12,38 @@ härledda filer bredvid ljudet.
 
 ## Snabbmanual — så kör du kedjan
 
-Exemplen är Git Bash. Sätt genvägarna en gång per terminalfönster:
+Exemplen är Git Bash. Ladda kommandona en gång per terminalfönster — `source`,
+inte `./`, annars dör allt med skriptets egen skalprocess:
 
 ```bash
-VMO=/c/Users/gunther/Dropbox/arkiv/workspace/ai-agents-projects/voice-memo-organizer
-PY="$VMO/venv/Scripts/python.exe"
-alias batch="$PY $VMO/batch-transkribera.py"
+source setup.sh          # funkar från projektet och från datamappen
+vmohjalp                 # listar kommandona
 ```
+
+Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `propagera`,
+`applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
+(`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
+`$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
+fungerar när du vill åt något som inte har en genväg.
+
+[setup.sh](setup.sh) i projektet är originalet; datamappens `setup.sh` är en rad
+som sourcar det, och är enda stället med en absolut sökväg.
 
 ### 1. Transkribera (steg a) — dyrt, allt annat är billigt
 
-Ställ dig i temamappen med ljudet och peka ut filerna. **`"$PWD"/` behövs** —
-utan den letar skriptet i inkorgen.
+Ställ dig i temamappen med ljudet:
 
 ```bash
 cd /c/Users/gunther/Dropbox/arkiv/mediadev/transkribera/NAR-profetrorelsen
-batch "$PWD"/*.m4a --dry-run     # se vad som skulle köras
-batch "$PWD"/*.m4a               # kör allt (idempotent — hoppar över klara)
-files=("$PWD"/*.m4a); batch "${files[@]:0:3}"   # eller bara några
+harmapp --dry-run     # se vad som skulle köras
+harmapp               # kör allt i mappen (idempotent — hoppar över klara)
+```
+
+`harmapp` tar ljudet i mappen du står i. Vill du styra urvalet själv finns
+`batch`, men då **behövs `"$PWD"/`** — utan den letar skriptet i inkorgen:
+
+```bash
+files=("$PWD"/*.m4a); batch "${files[@]:0:3}"   # bara de tre första
 ```
 
 Räkna med **0,8–1,5× realtid**; 39 filer ≈ 9 timmar. **Datorn somnar och stryper
@@ -39,15 +53,14 @@ PowerShell med vaken-låsning, eller stanna vid datorn.
 ### 2. Flagga felhörningar (steg b) — ~$0,25/fil
 
 ```bash
-cd "$VMO"
-"$PY" batch-flagga.py --dry-run   # lista + kostnadsuppskattning
-"$PY" batch-flagga.py             # flaggar OCH gör granskningsklart
+flagga --dry-run   # lista + kostnadsuppskattning
+flagga             # flaggar OCH gör granskningsklart
 ```
 
 ### 3. Granska i webbläsaren
 
 ```bash
-cd "$VMO/granska" && docker compose up      # http://localhost:8137
+granska            # http://localhost:8137
 ```
 
 Väljaren listar alla filer, senaste överst. Klicka en → rätta med `n` (nästa),
@@ -58,8 +71,8 @@ transkription behövs** i sidopanelen.
 ### 3b. Låt rättelserna hitta sina syskon (frivilligt)
 
 ```bash
-"$PY" propagera-namn.py --dry-run     # visa förslagen
-"$PY" propagera-namn.py               # lägg dem som nya flaggor
+propagera --dry-run     # visa förslagen
+propagera               # lägg dem som nya flaggor
 ```
 
 Detektorn ser ord, inte dokument: samma namn förvanskas olika många gånger och
@@ -74,11 +87,11 @@ fynd; resten kostar ett tangenttryck. Justera med `--troskel=` (lägre = fler).
 ### 4. Skriv in besluten
 
 ```bash
-"$PY" aktuell.py                  # vilken fil är vald? (skriver ingenting)
-"$PY" applicera-corrections.py    # följer filen du valt i GUI:t
+aktuell                # vilken fil är vald? (skriver ingenting)
+applicera --dry-run    # alla färdiggranskade på en gång
+applicera
 
-"$PY" batch-applicera.py --dry-run   # alla färdiggranskade på en gång
-"$PY" batch-applicera.py
+"$PY" "$VMO/applicera-corrections.py"   # eller en enda fil, den du valt i GUI:t
 ```
 
 `aktuell.py` svarar på frågan som annars kräver att GUI:t är igång: vilken fil
@@ -92,11 +105,11 @@ vad som skulle ändras innan något rörs.
 ### 5. Läsbar text (steg c)
 
 ```bash
-"$PY" forbattra.py         # -> <namn>.md
-"$PY" negationsvakt.py     # larmar om en negation tappats
+forbattra --dry-run    # alla applicerade filer + kostnad
+forbattra              # kör steg c OCH negationsvakten per fil
 
-"$PY" batch-forbattra.py --dry-run   # alla applicerade filer + kostnad
-"$PY" batch-forbattra.py             # kör steg c OCH negationsvakten per fil
+"$PY" "$VMO/forbattra.py"       # eller en enda fil -> <namn>.md
+"$PY" "$VMO/negationsvakt.py"   # ... och vakten separat
 ```
 
 Steg c kostar pengar (~**$0,01 per ljudminut**, uppmätt), så batchen visar alltid
@@ -112,9 +125,10 @@ i config.toml. `aktuell.py` visar valet i förväg.
 
 | Vill du... | Gör så |
 | --- | --- |
-| veta vilken fil som är vald | `aktuell.py` — fil, mapp, flaggor kvar, applicerad eller ej |
-| applicera många filer på en gång | `batch-applicera.py` — hoppar över ogranskade, märkta och redan applicerade |
-| köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `transkribera.py` |
+| veta vilken fil som är vald | `aktuell` — fil, mapp, flaggor kvar, applicerad eller ej |
+| se kommandolistan igen | `vmohjalp` |
+| gå till projektmappen | `vmo` |
+| köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `"$PY" "$VMO/transkribera.py"` |
 | granska en fil som saknar flaggning | öppna den ändå i väljaren, klicka valfritt ord |
 | leta subtila fel en gång till | `granska-igen.py` (Claude Fable, ~$4/fil — sällan behövt) |
 | transkribera om en fil | ta bort dess `-corrections.*`, `-bak*.json` och kopian i `granska/state/` **först** |
