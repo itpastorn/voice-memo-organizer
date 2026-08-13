@@ -312,6 +312,21 @@ transkriptioner i datamappen, senaste först (`generated_at`, annars filens
 ändringstid för äldre försök), med filter på temamapp och filnamn. Kom till när
 batchtranskribering gjorde en fil per `current.json` ohållbart.
 
+**Granskningen sker alltid mot rundans orörda bas**, aldrig mot den senaste
+`.json`:en: runda 2 mot `base_json` (`-bak2.json`), runda 1 mot `-bak.json` när
+den finns, annars mot `.json` — som då *är* basen. Skälet är att sidecarens
+`global_index` refererar basens ordpositioner, och apply tillämpar besluten mot
+samma bas.
+
+Detta var fel för runda 1 fram till 2026-08-13 och gav ett **tyst** fel: efter en
+apply som ändrat ordantalet ritades varje flagga efter första raderingen eller
+infogningen på fel ord. Texten är ju läsbar, så ingenting såg konstigt ut. Det
+upptäcktes först när `propagera-namn.py` lade nya flaggor i en redan applicerad
+fil och de inte gick att hitta — `Kerr` satt på *vad*, `Kerps` på *i*. **20 av
+filerna hade formen**; bara den ena hade ogranskade flaggor, så resten märktes
+aldrig. `index.php` jämför numera sidecarens `word_count` och högsta flaggindex
+mot den visade texten och skriver en varning i huvudet i stället för att tiga.
+
 Två följdbeslut som är lätta att missa:
 
 - **Filer utan sidecar listas och går att öppna.** GUI:t skapar en tom

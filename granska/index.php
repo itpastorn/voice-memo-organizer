@@ -76,8 +76,30 @@ foreach ($data['segments'] ?? [] as $seg) {
 }
 
 $flagByIndex = [];
+$maxIndex = -1;
 foreach ($side['flags'] as $f) {
-    if ($f['global_index'] !== null) $flagByIndex[$f['global_index']] = $f;
+    if ($f['global_index'] !== null) {
+        $flagByIndex[$f['global_index']] = $f;
+        if ($f['global_index'] > $maxIndex) $maxIndex = $f['global_index'];
+    }
+}
+
+// Pekar sidecarens index på den text vi visar? Sidecaren gjordes mot rundans
+// orörda bas; visar vi den APPLICERADE .json:en ritas varje flagga efter första
+// raderingen eller infogningen på fel ord — och det syns inte, texten är ju
+// läsbar. Hellre en högljudd varning än tyst felmarkering.
+$indexVarning = '';
+$vantatAntal = $side['word_count'] ?? null;
+if ($vantatAntal !== null && $vantatAntal !== count($words)) {
+    $indexVarning = "Sidecaren gjordes mot {$vantatAntal} ord, men den visade texten har "
+        . count($words) . '. Flaggorna sitter på fel ord.';
+} elseif ($maxIndex >= count($words)) {
+    $indexVarning = "En flagga pekar på ord {$maxIndex}, men texten har bara "
+        . count($words) . ' ord.';
+}
+if ($indexVarning !== '' && !str_contains($cur['transcript_json'], '-bak')) {
+    $indexVarning .= ' Gå tillbaka till filväljaren och öppna filen igen — '
+        . 'granskningen ska ske mot -bak.json, inte mot den applicerade texten.';
 }
 
 // Fraser: strukturerade (från GUI, har span_start) vs migrerade (referens).
@@ -202,6 +224,9 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   <?php if ($filStatus): ?>
     <span class="varning" id="varning">⚠ Ny transkription behövs<?=
       $filStatus['note'] ? ' — ' . htmlspecialchars($filStatus['note']) : '' ?></span>
+  <?php endif; ?>
+  <?php if ($indexVarning !== ''): ?>
+    <span class="varning">⚠ <?= htmlspecialchars($indexVarning) ?></span>
   <?php endif; ?>
   <span id="counts">
     <b id="c-tot"><?= count($side['flags']) ?></b> flaggor ·

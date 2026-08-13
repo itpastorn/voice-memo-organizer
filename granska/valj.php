@@ -42,13 +42,20 @@ if (isset($_GET['valj'])) {
     }
     if ($sidecar === null) $sidecar = "{$dir}{$stem}-corrections.json";  // skapas tom i index.php
 
-    // Runda 2 granskas mot sin bas (-bak2.json), inte mot senaste .json.
+    // Granskningen sker ALLTID mot rundans orörda bas, aldrig mot den senaste
+    // .json:en. Sidecarens global_index refererar basens ordpositioner, och
+    // apply tillämpar besluten mot samma bas. Visar GUI:t något annat efter en
+    // apply — som ändrat ordantalet — ritas varje flagga på fel ord, tyst.
+    //   Runda 2: sidecarens base_json (-bak2.json).
+    //   Runda 1: -bak.json när den finns, annars ÄR .json basen (ej applicerad).
     $transcript = $rel;
     if (str_ends_with($sidecar, '-corrections-2.json')) {
         $side = json_decode(@file_get_contents($dataDir . '/' . $sidecar), true) ?: [];
         if (!empty($side['base_json']) && is_file($dataDir . '/' . $dir . $side['base_json'])) {
             $transcript = $dir . $side['base_json'];
         }
+    } elseif (is_file($dataDir . '/' . $dir . $stem . '-bak.json')) {
+        $transcript = $dir . $stem . '-bak.json';
     }
 
     file_put_contents($here . '/current.json', json_encode([
