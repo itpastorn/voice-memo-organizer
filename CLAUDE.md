@@ -238,7 +238,7 @@ också är idempotensnyckeln.
 
 **Matchningen mättes, den gissades inte.** `jellyfish` installerades tillfälligt
 för att pröva fonetik på riktigt. Facit: åtta obeslutade varianter i
-`kirk-owens-posobiec` (655 ord, 29 beslut), med totalvolymen över 25 filer som
+`zego-kirk-owens-posobiec` (655 ord, 29 beslut), med totalvolymen över 25 filer som
 brusmått.
 
 | Metod | Tröskel | Mål av 8 | Förslag i filen | Över alla filer |
@@ -423,7 +423,7 @@ i filen syns inte i utdatan, och negationsvakten skulle larma på hela luckan ut
 att förklara varför — därför skrivs ingen `.md` alls när en bit fallerar.
 
 **Steg c rättar transkriptionsfel som steg b missade.** Uppmätt i
-`kirk-owens-posobiec`: *koncentrationsjuristerna* → konspirationsteoretikerna,
+`zego-kirk-owens-posobiec`: *koncentrationsjuristerna* → konspirationsteoretikerna,
 *Sobiek/Colbieks/Sovjet* → Posobiec, *Trilling Pont New Day* → Turning Point.
 Utfallet är rätt, men det betyder att `.md` och `.json` skiljer sig i **innehåll**
 och inte bara i putsning — JSON:en, sanningskällan, bär kvar felen. Det är ett
@@ -640,6 +640,52 @@ kostnadsuppskattningen, så en spärrad fil aldrig hinner kosta ett API-anrop.
 
 `namnvakt.py` är översikten över hela arkivet — vad som är spärrat, vad som bara
 avviker, och vad som ska döpas om. `--alla` listar de avvikande namnen ett och ett.
+
+**När ljudet döps om (`synka-namn.py`).** Ljudet döps om för hand — det är Lars
+filer och hans taxonomi. Men de härledda filerna bär stammen både i sitt namn och
+i sitt innehåll, och de följer inte med av sig själv. Namnvakten ser resultatet
+("ingen ljudfil med den stammen i mappen") men kan bara larma; `synka-namn.py`
+åtgärdar.
+
+Efter arkivomdöpningen 2026-08-28 var läget: **sex grupper om 26 härledda filer**
+var föräldralösa, och **89 innehållsfält** pekade på filer som inte fanns.
+
+Två fel, båda tysta:
+
+- **Föräldralösa grupper.** Hela familjen döps om — `.json`, `.srt`, `.txt`,
+  `.md`, `-bak*.json`, `-corrections*`, `-borttaget.txt` — plus arbetskopian i
+  `granska/state/`. `planering-med-ai` behövde dessutom **flyttas**: ljudet hade
+  fått en temamapp.
+- **Pekarfält.** `audio_file`, `transcript_json`, `base_json`, och `.md`:ns
+  frontmatter. Skiftlägesexakt, för det är där felet gömmer sig: Windows låter
+  `zego-Kirk-debatt.m4a` matcha `zego-kirk-debatt.m4a`, men GUI:t kör i Docker på
+  Linux där `valj.php:65` läser fältet rakt av och ljudknappen är död. 19
+  transkript hade det felet utan att någon märkt det.
+
+**Parningen bevisas mot ljudlängden, den gissas inte på namnet.** `ffprobe` mot
+JSON:ens `duration`, tolerans ±1 s — fyra av sex parades så, på hundradelen. De
+två äldre transkripten (`word_segments`/`text`-schemat) saknar `duration` och
+verifierades i stället på sista segmentets sluttid, som alltid ligger strax före
+ljudslutet; där krävs **också** namnsläktskap, så att två lika långa memon inte
+kan förväxlas. Vid flera eller inga kandidater görs ingenting och fallet
+rapporteras. `zego-Adam-Abraham` hamnade där: två lika långa kandidater, alltså
+Lars beslut.
+
+Tre regler som är lätta att göra fel, och som alla tre kostade en rättning:
+
+- **Suffixet härleds aldrig om, bara stammen byts.** En runda 2-sidecar pekar med
+  flit på `<stam>-bak2.json` — rundans orörda bas. Att "rätta" den till
+  `<stam>.json` hade riktat granskningen mot den redan applicerade texten.
+- **Filer som namnvakten spärrar rörs inte.** `zego-torpseminarium` har två
+  ljudfiler; att välja den alfabetiskt första hade satt `.aac` (47 min) som källa
+  för en text som kommer ur `.md`:ns `.m4a` (54 min).
+- **`titel` i `.md` är maskinsatt** — uppmätt 54 av 55 filer — och följer därför
+  stammen. En titel med blanksteg eller versal är en rubrik du skrivit och rörs
+  inte.
+
+`--dry-run` är **standard**; skriptet skriver bara med `--kor`. Det avviker från
+de andra batcharna med flit: här ligger färdiggranskat material, och 27
+omdöpningar är inget man ångrar med en knapp.
 
 **Fällan som hittades på vägen:** `applicera-corrections.py:main()` läste aldrig
 `sys.argv`. `--dry-run` gav alltså en **skarp** apply, och en filsökväg på

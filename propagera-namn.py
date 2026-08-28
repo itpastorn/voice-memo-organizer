@@ -31,7 +31,7 @@ import korrigeringar as k
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
-# Uppmätt 2026-08-13 mot kirk-owens-posobiec (655 ord, 29 beslut) och 25 filer
+# Uppmätt 2026-08-13 mot zego-kirk-owens-posobiec (655 ord, 29 beslut) och 25 filer
 # med beslut. Normaliserat Levenshtein vann över Jaro-Winkler, Metaphone, NYSIIS,
 # Soundex och Match Rating (jellyfish). Se CLAUDE.md för tabellen.
 TROSKEL = 0.62
@@ -57,27 +57,11 @@ STOPPORD = {
 # Likhet
 # --------------------------------------------------------------------------- #
 
-def levenshtein(a: str, b: str) -> int:
-    """Redigeringsavstånd. Egen implementation — projektet har inga
-    fuzzy-beroenden, och detta är tolv rader."""
-    if a == b:
-        return 0
-    if not a or not b:
-        return max(len(a), len(b))
-    rad = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        ny = [i]
-        for j, cb in enumerate(b, 1):
-            ny.append(min(rad[j] + 1, ny[j - 1] + 1, rad[j - 1] + (ca != cb)))
-        rad = ny
-    return rad[-1]
-
-
-def likhet(a: str, b: str) -> float:
-    """1,0 = identiska. Normaliserat mot den längsta strängen, så ett fel i ett
-    kort ord väger tyngre än ett fel i ett långt."""
-    langst = max(len(a), len(b))
-    return 1 - levenshtein(a, b) / langst if langst else 0.0
+# levenshtein/likhet bodde här tills synka-namn.py blev en andra konsument.
+# Delade byggstenar bor i korrigeringar.py (CLAUDE.md); aliaset behålls så att
+# resten av modulen läser som förut.
+levenshtein = k.levenshtein
+likhet = k.likhet
 
 
 # --------------------------------------------------------------------------- #

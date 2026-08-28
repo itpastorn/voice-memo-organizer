@@ -21,7 +21,7 @@ vmohjalp                 # listar kommandona
 ```
 
 Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
-`propagera`, `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
+`synka`, `propagera`, `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
 fungerar när du vill åt något som inte har en genväg.
@@ -45,6 +45,28 @@ dolde 47 minuter ljud som aldrig kunnat transkriberas
 (`zego-torpseminarium.aac`). Åtgärden är alltid att döpa om ljudet så att
 stammarna blir unika i hela arkivet — `granska/state/` är platt, så det räcker
 inte att de skiljer sig inom mappen.
+
+### 0b. Har du döpt om ljudfiler?
+
+```bash
+synka                    # vad har halkat efter? (skriver inget)
+synka --kor              # döp om de härledda filerna och laga pekarfälten
+```
+
+Ljudet döper du om själv. De härledda filerna (`.json`, `.srt`, `.txt`, `.md`,
+`-bak*.json`, `-corrections*`, `-borttaget.txt`) bär stammen både i namnet och i
+innehållet och följer inte med — `synka` tar hela familjen, inklusive
+arbetskopian i `granska/state/`, och flyttar den om ljudet bytt temamapp.
+
+Parningen bevisas mot **ljudlängden**, inte mot namnet: `ffprobe` mot JSON:ens
+`duration`. Hittas flera eller inga kandidater görs ingenting och fallet
+rapporteras — hellre en fil att reda ut för hand än en `.md` på fel memo.
+Filer som `namnvakt` spärrar rörs inte.
+
+Samma svep lagar `audio_file` och `.md`:ns frontmatter när de pekar med fel
+skiftläge. Det låter kosmetiskt men är det inte: Windows låter
+`zego-Kirk-debatt.m4a` matcha `zego-kirk-debatt.m4a`, medan GUI:t kör i Docker på
+Linux där ljudknappen tystnar.
 
 ### 1. Transkribera (steg a) — dyrt, allt annat är billigt
 
@@ -144,6 +166,7 @@ i config.toml. `aktuell.py` visar valet i förväg.
 | --- | --- |
 | veta vilken fil som är vald | `aktuell` — fil, mapp, flaggor kvar, applicerad eller ej |
 | se vilka filnamn som spärrar pipelinen | `namnvakt` (`--alla` listar även de ofarliga avvikelserna) |
+| jag har döpt om eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |
 | köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `"$PY" "$VMO/transkribera.py"` |

@@ -110,6 +110,29 @@ EXCLUDE_DIRS = {"test", "sammanfatta"}          # utanför projektet, se CLAUDE.
 HARLEDDA_MARKORER = ("-corrections", "-bak.json", ".bak.json",
                      "-bak2.json", ".bak2.json")
 
+# Hela den härledda familjen kring en stam, längsta suffix först så att
+# '-corrections-2.json' matchas före '-corrections.json' och '-bak2.json' före
+# '.json'. Ordningen ÄR logiken — en kortare träff först skulle ge fel stam.
+#
+# Listan bor här därför att två skript måste vara överens om vad som hör till en
+# fil: synka-namn.py döper om familjen, och namnvakten avgör vad som ens är ett
+# transkript. Går de isär lämnas filer kvar med gammal stam.
+HARLEDDA_SUFFIX = (
+    "-corrections-2.json", "-corrections.json", "-corrections.txt",
+    "-bak2.json", "-bak.json", ".bak2.json", ".bak.json",
+    "-korrigerad.srt", "-borttaget.txt",
+    ".json", ".srt", ".txt", ".md",
+)
+
+
+def stam_av(namn: str) -> str | None:
+    """Stammen ur ett härlett filnamn, eller None om det inte är en härledd fil.
+    'zego-x-corrections.json' -> 'zego-x'."""
+    for suffix in HARLEDDA_SUFFIX:
+        if namn.endswith(suffix) and len(namn) > len(suffix):
+            return namn[: -len(suffix)]
+    return None
+
 
 def ar_transkript(namn: str) -> bool:
     """Är filnamnet ett transkript, och inte en sidecar eller en backup?
@@ -486,6 +509,29 @@ def grundform(w: str) -> str:
         if len(w) - len(slut) >= 3 and w.endswith(slut):
             return w[: -len(slut)]
     return w
+
+
+def levenshtein(a: str, b: str) -> int:
+    """Redigeringsavstånd. Egen implementation — projektet har inga
+    fuzzy-beroenden, och detta är tolv rader."""
+    if a == b:
+        return 0
+    if not a or not b:
+        return max(len(a), len(b))
+    rad = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        ny = [i]
+        for j, cb in enumerate(b, 1):
+            ny.append(min(rad[j] + 1, ny[j - 1] + 1, rad[j - 1] + (ca != cb)))
+        rad = ny
+    return rad[-1]
+
+
+def likhet(a: str, b: str) -> float:
+    """1,0 = identiska. Normaliserat mot den längsta strängen, så ett fel i ett
+    kort ord väger tyngre än ett fel i ett långt."""
+    langst = max(len(a), len(b))
+    return 1 - levenshtein(a, b) / langst if langst else 0.0
 
 
 ORDLISTA_DIR = PROJECT_ROOT / "ordlista"
