@@ -147,6 +147,17 @@ def forbattra_en(client, cfg: dict, json_path: Path, *,
 
     if not json_path.is_file():
         raise ForbattraFel(f"JSON saknas: {json_path}")
+
+    # Namnvakt: .md:n och -borttaget.txt namnges efter stammen, så en kolliderande
+    # stam skulle skriva över en annan fils steg c-utdata.
+    try:
+        for v in k.vakta_transkript(cfg, json_path):
+            if not tyst:
+                print(f"    VARNING: {v}", file=sys.stderr)
+    except k.NamnFel as e:
+        besked = f"{e} — {e.atgard}" if e.atgard else str(e)
+        raise ForbattraFel(besked) from e
+
     data = json.loads(json_path.read_text(encoding="utf-8"))
     segments = data.get("segments", [])
     if not segments:

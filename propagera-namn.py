@@ -299,6 +299,8 @@ def main() -> int:
         print(f"FEL: JSON saknas: {json_path}", file=sys.stderr)
         return 1
 
+    k.vakta_eller_avsluta(cfg, json_path)
+
     sidecar_path, runda, var = k.valj_sidecar(json_path)
     if sidecar_path is None:
         print(f"FEL: ingen sidecar för {json_path.name} — kör steg b först.",

@@ -182,6 +182,15 @@ def applicera_en(json_path: Path, *, sidecar_path: Path | None = None,
     if not json_path.is_file():
         raise ApplyFel(f"JSON saknas: {json_path}")
 
+    # Namnvakt. En stam som kolliderar eller inte är normaliserad får inte
+    # appliceras: sidecaren i den platta granska/state/ kan tillhöra en annan
+    # fil, och då skrivs besluten in i fel transkript. Fel före skrivning.
+    try:
+        for v in k.vakta_transkript(k.load_config(), json_path):
+            print(f"    VARNING: {v}", file=sys.stderr)
+    except k.NamnFel as e:
+        raise ApplyFel(str(e), atgard=e.atgard) from e
+
     if sidecar_path is None:
         sidecar_path, runda, sidecar_var = k.valj_sidecar(json_path)
         if sidecar_path is None:
@@ -316,6 +325,10 @@ def applicera_en(json_path: Path, *, sidecar_path: Path | None = None,
         torrkorning=torrkorning,
     )
     if torrkorning:
+        # Fyll i vad som SKULLE skrivas. En tom lista efter "Skulle skriva:"
+        # läser som att torrkörningen inte hittade något att göra.
+        utfall.skrivna = [json_path, json_path.with_suffix(".srt"),
+                          json_path.with_suffix(".txt")]
         return utfall
 
     # Säkerhetskopiera originalet EN gång (json_path är fortfarande originalet
@@ -353,10 +366,27 @@ def skriv_rapport(u: Utfall, vald_via: str) -> None:
         print(f"Ej tillämpat: {u.olosta} flagga(or) utan ordindex, "
               f"{u.otolkade} otolkad(e) rad(er) i sidecaren")
     print(f"Segment: {u.segment_fore} -> {u.segment_efter}")
-    print("Skrev:   " + ", ".join(p.name for p in u.skrivna))
+    etikett = "Skulle skriva:" if u.torrkorning else "Skrev:  "
+    print(f"{etikett} " + ", ".join(p.name for p in u.skrivna))
 
 
 def main() -> int:
+    # Flaggorna måste läsas här. Fram till 2026-08-28 gjorde main() det inte
+    # alls: --dry-run gav en SKARP apply, och en filsökväg på kommandoraden
+    # ignorerades tyst så att fel fil bearbetades. Ett argument som inte känns
+    # igen ska avbryta, aldrig tolkas som "inga argument".
+    torrkorning = False
+    for a in sys.argv[1:]:
+        if a in ("--dry-run", "--torrkor"):
+            torrkorning = True
+        else:
+            print(f"FEL: okänt argument {a!r}", file=sys.stderr)
+            print("     applicera-corrections.py tar ingen filsökväg — filen "
+                  "väljs i GUI:t (granska/valj.php).", file=sys.stderr)
+            print("     Kör aktuell.py för att se vilken fil som är vald, eller "
+                  "batch-applicera.py för alla som väntar.", file=sys.stderr)
+            return 2
+
     cfg = k.load_config()
     json_path, vald_via = k.aktuell_json(cfg)
 
@@ -370,7 +400,7 @@ def main() -> int:
               file=sys.stderr)
 
     try:
-        u = applicera_en(json_path)
+        u = applicera_en(json_path, torrkorning=torrkorning)
     except ApplyFel as e:
         print(f"FEL: {e}", file=sys.stderr)
         if e.atgard:

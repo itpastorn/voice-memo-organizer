@@ -10,6 +10,7 @@ Se CLAUDE.md.
 
 from __future__ import annotations
 
+import functools
 import json
 import tomllib
 import unicodedata
@@ -223,6 +224,230 @@ def antal_operationer(side: dict) -> int:
     return (len(side.get("flags", []))
             + len(side.get("phrase_edits", []))
             + len(side.get("insertions", [])))
+
+
+# --------------------------------------------------------------------------- #
+# Namnvakt
+#
+# File Naming Convention i CLAUDE.md gäller allt vi PRODUCERAR. Ljudet är
+# undantaget: 113 av 363 befintliga ljudfiler har versaler, och de döps inte om
+# utan att Lars ber om det. transkribera.py normaliserar stammen på väg ut, så
+# 'zego-Trump-akrist-1.m4a' ger 'zego-trump-akrist-1.json' och allt nedströms är
+# redan rent. En spärr mot versaler skulle alltså stoppa en tredjedel av arkivet
+# utan att avvärja ett enda fel.
+#
+# Det farliga är i stället normaliseringens KOLLISIONER: faller två ljudfiler
+# ihop till samma stam pekar de på samma .json, och den ena inspelningen kommer
+# aldrig in i pipelinen. Uppmätt i arkivet: zego-torpseminarium.aac (47:18) och
+# zego-torpseminarium.m4a (54:20) är två OLIKA inspelningar med samma stam, och
+# bara .m4a:ns 54 minuter finns transkriberade. Ingenting sa ifrån.
+# --------------------------------------------------------------------------- #
+
+class NamnFel(Exception):
+    """Filnamnet gör vidare bearbetning otrygg — pipelinen skulle skriva över
+    fel fil eller tappa en inspelning. Bär en åtgärdstext, som ApplyFel."""
+
+    def __init__(self, meddelande: str, *, atgard: str = "") -> None:
+        super().__init__(meddelande)
+        self.atgard = atgard
+
+
+LJUDANDELSER = {".m4a", ".mp3", ".aac", ".wav", ".ogg", ".m4b", ".flac", ".opus"}
+
+
+def namnbrott(stem: str) -> list[str]:
+    """Vilka av konventionens regler stammen bryter mot, i klartext. Tom lista
+    betyder att normalize_stem() skulle lämna den orörd."""
+    brott: list[str] = []
+    if any(c.isupper() for c in stem):
+        brott.append("versaler")
+    if "_" in stem:
+        brott.append("understreck")
+    if " " in stem:
+        brott.append("blanksteg")
+    if any(ord(c) > 127 for c in stem):
+        brott.append("icke-ASCII")
+    ovrigt = sorted({c for c in stem if c.isascii() and not c.isalnum()
+                     and c not in "-_ "})
+    if ovrigt:
+        brott.append("otillåtna tecken: " + " ".join(ovrigt))
+    if "--" in stem or stem.strip("-") != stem:
+        brott.append("bindestreck som ska kollapsas eller strippas")
+    return brott
+
+
+def ljud_per_stam(mapp: Path) -> dict[str, list[Path]]:
+    """Ljudfilerna i en mapp grupperade på normaliserad stam — alltså på den
+    .json var och en av dem skulle skriva."""
+    per_stam: dict[str, list[Path]] = {}
+    try:
+        innehall = sorted(mapp.iterdir())
+    except OSError:
+        return per_stam
+    for p in innehall:
+        if p.is_file() and p.suffix.lower() in LJUDANDELSER:
+            per_stam.setdefault(normalize_stem(p.stem), []).append(p)
+    return per_stam
+
+
+@functools.lru_cache(maxsize=8)
+def _ljudindex(root: str) -> dict[str, tuple[str, ...]]:
+    """Hela arkivets ljudfiler grupperade på normaliserad stam, som sökvägar
+    relativt roten.
+
+    Cachad: en batch över 363 filer skulle annars gå igenom trädet en gång per
+    fil. Ljudmängden ändras inte under en körning — vi skapar aldrig ljud — så
+    cachen kan inte bli inaktuell mitt i ett jobb. Anropa nollstall_namnindex()
+    om något ändå döps om i samma process."""
+    rot = Path(root)
+    per_stam: dict[str, list[str]] = {}
+    for f in rot.rglob("*"):
+        if f.suffix.lower() not in LJUDANDELSER or not f.is_file():
+            continue
+        rel = f.relative_to(rot)
+        if {d.lower() for d in rel.parts[:-1]} & EXCLUDE_DIRS:
+            continue
+        per_stam.setdefault(normalize_stem(f.stem), []).append(rel.as_posix())
+    return {stam: tuple(sorted(v)) for stam, v in per_stam.items()}
+
+
+def nollstall_namnindex() -> None:
+    """Glöm det cachade stamindexet (efter en omdöpning i samma process)."""
+    _ljudindex.cache_clear()
+
+
+def vakta_ljud(cfg: dict, audio_path: Path) -> list[str]:
+    """Steg a. Kastar NamnFel när ljudfilen inte kan transkriberas tryggt.
+    Returnerar varningar som anroparen bör logga.
+
+    Kollisionen är hård med flit: två ljudfiler som normaliserar till samma stam
+    skriver samma .json, och den som körs sist raderar den förstas transkript
+    utan att någonting säger ifrån."""
+    audio_path = Path(audio_path)
+    stem = normalize_stem(audio_path.stem)
+    if not stem:
+        raise NamnFel(
+            f"{audio_path.name}: filnamnet ger ingen giltig stam",
+            atgard="Döp om ljudfilen så att den har minst ett tecken a-z eller 0-9.")
+
+    syskon = [p for p in ljud_per_stam(audio_path.parent).get(stem, [])
+              if p.name != audio_path.name]
+    if syskon:
+        namn = ", ".join(sorted(p.name for p in [audio_path] + syskon))
+        raise NamnFel(
+            f"{audio_path.name}: {len(syskon) + 1} ljudfiler i mappen ger samma "
+            f"stam {stem!r} och därmed samma {stem}.json — {namn}",
+            atgard="Döp om alla utom en så att stammarna skiljer sig åt. "
+                   "Kör namnvakt.py för att se hela arkivet.")
+
+    # Samma stam i en ANNAN temamapp är lika illa, fast senare: granska/state/
+    # är platt, så när båda transkriberats delar de arbetskopia och den ena
+    # granskningens beslut hamnar i den andras sidecar. Fånga det här, innan
+    # någon av dem kostat CPU-tid. (Uppmätt: zego-predikan-2 finns i både
+    # andra-ideer-teologi-substack-webb/ och ideer-predikoutkast-....)
+    try:
+        rot = Path(cfg["data"]["root"]).resolve()
+        egen_rel = audio_path.resolve().relative_to(rot).as_posix()
+        annanstans = [r for r in _ljudindex(str(rot)).get(stem, ())
+                      if r != egen_rel and Path(r).parent != Path(egen_rel).parent]
+    except (OSError, ValueError, KeyError):
+        annanstans = []
+    if annanstans:
+        raise NamnFel(
+            f"{audio_path.name}: stammen {stem!r} används i fler än en temamapp — "
+            f"granska/state/ är platt, så deras sidecars skulle skriva över "
+            f"varandra: {', '.join([egen_rel] + annanstans)}",
+            atgard="Döp om alla utom en så att stammarna blir unika i hela "
+                   "arkivet, inte bara i mappen.")
+
+    varningar: list[str] = []
+    brott = namnbrott(audio_path.stem)
+    if brott:
+        varningar.append(
+            f"ljudfilens namn följer inte konventionen ({', '.join(brott)}); "
+            f"utdata får ändå det normaliserade namnet {stem!r}")
+    return varningar
+
+
+def vakta_transkript(cfg: dict, json_path: Path) -> list[str]:
+    """Steg b och framåt. Kastar NamnFel när transkriptet inte är tryggt att
+    arbeta vidare på. Returnerar varningar som anroparen bör skriva ut.
+
+    Tre hårda fel:
+
+    1. Transkriptets EGEN stam är inte normaliserad. En .json är något vi
+       producerar, så en avvikande stam betyder att filen inte kom ur den här
+       pipelinen. json_path_for() kan aldrig härleda fram till den, och dess
+       härledda namn (-bak, -corrections, .md) skulle blandas ihop med den
+       normaliserade grannens.
+    2. Två ljudfiler i mappen faller ihop på transkriptets stam. Då är det inte
+       längre känt vilken inspelning texten kommer ur, och en omtranskribering
+       kan tyst byta ut den mot den andra.
+    3. Två transkript i arkivet delar stam. granska/state/ är platt, så deras
+       arbetskopior skriver över varandra: man granskar den ena filen och
+       besluten landar i den andras sidecar.
+    """
+    json_path = Path(json_path)
+    stem = json_path.stem
+
+    brott = namnbrott(stem)
+    if brott:
+        raise NamnFel(
+            f"{json_path.name}: transkriptets namn bryter mot konventionen "
+            f"({', '.join(brott)})",
+            atgard="Transkript är härledda filer. Transkribera om ljudet, eller "
+                   f"döp om transkriptet och dess härledda filer till "
+                   f"{normalize_stem(stem)!r}.")
+
+    syskon = ljud_per_stam(json_path.parent).get(stem, [])
+    if len(syskon) > 1:
+        namn = ", ".join(sorted(p.name for p in syskon))
+        raise NamnFel(
+            f"{json_path.name}: {len(syskon)} ljudfiler i mappen ger stammen "
+            f"{stem!r} — okänt vilken av dem texten kommer ur: {namn}",
+            atgard="Döp om alla utom en så att stammarna skiljer sig åt, och "
+                   "transkribera de övriga separat.")
+
+    root = Path(cfg["data"]["root"])
+    try:
+        egen = json_path.resolve()
+        dubbletter = [p for p in iter_transkript(root)
+                      if p.stem == stem and p.resolve() != egen]
+    except (OSError, ValueError):
+        dubbletter = []
+    if dubbletter:
+        andra = ", ".join(sorted(p.relative_to(root).as_posix() for p in dubbletter))
+        raise NamnFel(
+            f"{json_path.name}: stammen {stem!r} finns i fler än en temamapp — "
+            f"granska/state/ är platt, så sidecars skriver över varandra: {andra}",
+            atgard="Döp om ljudet i en av mapparna och transkribera om, så att "
+                   "stammarna blir unika i hela arkivet.")
+
+    varningar: list[str] = []
+    if not syskon:
+        varningar.append("ingen ljudfil med den stammen i mappen — har ljudet "
+                         "flyttats eller döpts om?")
+    elif namnbrott(syskon[0].stem):
+        varningar.append(f"ljudfilen heter {syskon[0].name!r} och följer inte "
+                         "konventionen; transkriptet är rätt namngivet")
+    return varningar
+
+
+def vakta_eller_avsluta(cfg: dict, json_path: Path) -> None:
+    """Namnvakt för skript som bearbetar en fil och avslutar.
+
+    Skriver varningarna till stderr och avbryter med exit-kod 2 vid NamnFel —
+    egen kod, så att ett namnproblem går att skilja från ett vanligt
+    misslyckande (1) i ett skalskript."""
+    import sys
+    try:
+        for v in vakta_transkript(cfg, json_path):
+            print(f"VARNING: {v}", file=sys.stderr)
+    except NamnFel as e:
+        print(f"FEL: {e}", file=sys.stderr)
+        if e.atgard:
+            print(f"     {e.atgard}", file=sys.stderr)
+        raise SystemExit(2)
 
 
 # --------------------------------------------------------------------------- #

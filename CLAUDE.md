@@ -53,6 +53,9 @@ Batch finns för **alla** körbara steg: a, b, apply och c. `data.test_file` byt
 för hand men läses numera bara av steg a — allt efter granskningen följer GUI:ts
 filval (`aktuell.py` visar vilken det är).
 
+**Namnvakten spärrar sex filer** (`namnvakt.py`) — se File Naming Convention.
+Ett av fallen dolde 47 minuter ljud som aldrig kunnat transkriberas.
+
 **Kvar av arkivet: ~348 av 355 ljudfiler.** Det är den stora återstående
 kostnaden, och den blockeras av issue #9 (se Körning).
 
@@ -598,6 +601,52 @@ All output files must follow these normalization rules:
 6. Strip leading and trailing hyphens
 
 Never use underscores anywhere in filenames or project filenames.
+
+**Namnvakt (`namnvakt.py` + `korrigeringar.vakta_ljud/vakta_transkript`).** Varje
+skript kontrollerar filnamnet innan det arbetar. Vakten är inte en spärr mot
+konventionsbrott — den är en spärr mot **kollisioner**.
+
+Skillnaden är mätt, inte antagen. **113 av 363 ljudfiler bryter mot konventionen**
+(112 versaler, 1 icke-ASCII, 1 blanksteg). Alla 113 är ofarliga: `transkribera.py`
+normaliserar stammen på väg ut, så `zego-Trump-akrist-1.m4a` ger
+`zego-trump-akrist-1.json` och allt nedströms är redan rent. En spärr mot versaler
+hade stoppat en tredjedel av arkivet utan att avvärja ett enda fel — och den hade
+motsagt regeln ovan om att ljudet inte döps om.
+
+Det farliga är i stället när normaliseringen får två filer att falla ihop:
+
+| Fel | Följd |
+| --- | --- |
+| två ljudfiler i samma mapp → samma stam | båda skriver samma `.json`; den som körs sist raderar den förstas transkript |
+| samma stam i två temamappar | `granska/state/` är platt — sidecars skriver över varandra, och besluten landar i fel fil |
+| transkript vars egen stam inte är normaliserad | `json_path_for()` kan aldrig härleda fram till det; härledda namn blandas med grannens |
+
+**Sex filer är spärrade, och en av dem dolde ett verkligt tapp.**
+`zego-torpseminarium.aac` (47:18) och `zego-torpseminarium.m4a` (54:20) är **två
+olika inspelningar** — inte samma ljud i två format. Bara `.m4a`:ns 54 minuter är
+transkriberade; `.aac`:ns 47 minuter har aldrig kunnat komma in i pipelinen,
+eftersom utdatasökvägen redan var upptagen. Ingenting sa ifrån.
+`zego-benefit-of-the-doubt-...` (`.m4a`/`.mp3`) är däremot samma inspelning i två
+format — 548,2794 s i båda — alltså ofarlig dubblett, men samma spärr.
+`zego-predikan-2` finns i två temamappar och fångas **innan** någon av dem
+transkriberats; hade båda körts hade den ena granskningen skrivit i den andras
+sidecar.
+
+Vakten skiljer därför på tre utfall: **spärrat** (avbryter, exit-kod 2),
+**varning** (körs vidare — t.ex. ett avvikande ljudfilnamn, eller ett transkript
+vars ljudfil inte längre finns i mappen) och rent. Batcharna hoppar över spärrade
+filer och kör de övriga; `batch-flagga.py` filtrerar dem ur kön **före**
+kostnadsuppskattningen, så en spärrad fil aldrig hinner kosta ett API-anrop.
+
+`namnvakt.py` är översikten över hela arkivet — vad som är spärrat, vad som bara
+avviker, och vad som ska döpas om. `--alla` listar de avvikande namnen ett och ett.
+
+**Fällan som hittades på vägen:** `applicera-corrections.py:main()` läste aldrig
+`sys.argv`. `--dry-run` gav alltså en **skarp** apply, och en filsökväg på
+kommandoraden ignorerades tyst så att fel fil bearbetades. Biblioteket stödde
+`torrkorning` hela tiden — det var bara enfilsvägen som inte kopplade in flaggan.
+Rättat: flaggan läses, rapporten säger "Skulle skriva:" i stället för "Skrev:",
+och ett okänt argument avbryter i stället för att tolkas som inga argument.
 
 ## Struktur
 

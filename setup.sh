@@ -6,8 +6,8 @@
 #
 #     source setup.sh          (eller: . setup.sh)
 #
-# Ger: harmapp, batch, flagga, granska, aktuell, propagera, applicera,
-# forbattra, vmo. Kör `vmohjalp` för listan.
+# Ger: harmapp, batch, flagga, granska, aktuell, namnvakt, propagera,
+# applicera, forbattra, vmo. Kör `vmohjalp` för listan.
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     echo "setup.sh måste sourcas, annars försvinner allt när skriptet slutar:" >&2
@@ -34,6 +34,7 @@ else
     applicera() { "$PY" "$VMO/batch-applicera.py"    "$@"; }   # steg 4
     forbattra() { "$PY" "$VMO/batch-forbattra.py"    "$@"; }   # steg c + negationsvakt
     aktuell()   { "$PY" "$VMO/aktuell.py"            "$@"; }   # vilken fil är vald?
+    namnvakt()  { "$PY" "$VMO/namnvakt.py"           "$@"; }   # kolliderande filnamn
     vmo()       { cd "$VMO" || return; }
     granska()   { ( cd "$VMO/granska" && docker compose up ); }  # GUI på :8137
 
@@ -64,6 +65,7 @@ Kommandon (alla tar samma flaggor som skripten):
   flagga [--dry-run]      steg b, LLM-flaggning + gör granskningsklart
   granska                 starta webb-GUI:t på http://localhost:8137
   aktuell                 vilken fil är vald i GUI:t? (skriver inget)
+  namnvakt [--alla]       filnamn som kolliderar och spärrar pipelinen
   propagera [--dry-run]   sprid fattade rättelser till orättade förekomster
   applicera [--dry-run]   skriv in besluten i alla färdiggranskade filer
   forbattra [--dry-run]   steg c -> .md, med negationsvakt efter varje fil

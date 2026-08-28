@@ -110,6 +110,7 @@ def kontrollera(json_path: Path) -> tuple[int, list[str]]:
 def main() -> int:
     cfg = k.load_config()
     json_path, vald_via = k.aktuell_json(cfg)
+    k.vakta_eller_avsluta(cfg, json_path)
     try:
         antal_block, avvikelser = kontrollera(json_path)
     except VaktFel as e:

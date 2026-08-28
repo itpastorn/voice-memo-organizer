@@ -46,6 +46,8 @@ def main() -> int:
         print("Kör transkribera.py först (steg a).", file=sys.stderr)
         return 1
 
+    k.vakta_eller_avsluta(cfg, json_path)
+
     out_path = json_path.with_name(f"{json_path.stem}-corrections.txt")
     if out_path.exists():
         print(f"FEL: {out_path.name} finns redan.", file=sys.stderr)

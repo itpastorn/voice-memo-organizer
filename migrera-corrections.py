@@ -197,6 +197,8 @@ def main() -> int:
     if not json_path.is_file():
         print(f"FEL: JSON saknas: {json_path}", file=sys.stderr)
         return 1
+
+    k.vakta_eller_avsluta(cfg, json_path)
     data = json.loads(json_path.read_text(encoding="utf-8"))
     words = k.flatten_words(data.get("segments", []))
     if not words:

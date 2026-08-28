@@ -74,6 +74,16 @@ def upptack(cfg: dict, root: Path, n: int | None) -> list[Path]:
             print(f"  hoppar över (ny transkription behövs): "
                   f"{p.relative_to(root).as_posix()}", file=sys.stderr)
             continue
+        # Namnvakten före kön, inte i flagga_en: en spärrad fil ska aldrig hinna
+        # kosta ett API-anrop, och den ska inte heller räknas in i kostnads-
+        # uppskattningen som --dry-run skriver ut.
+        try:
+            k.vakta_transkript(cfg, p)
+        except k.NamnFel as e:
+            print(f"  SPÄRRAD av namnvakten: {e}", file=sys.stderr)
+            if e.atgard:
+                print(f"       {e.atgard}", file=sys.stderr)
+            continue
         filer.append(p)
     filer.sort(key=lambda p: p.stat().st_mtime, reverse=True)   # nyaste först
     return filer if n is None else filer[:n]

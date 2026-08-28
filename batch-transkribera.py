@@ -136,10 +136,19 @@ def main() -> int:
         return 0
 
     logger.info("=== Batch: %d fil(er) att köra ===", len(targets))
+    sparrade = 0
     for i, p in enumerate(targets, 1):
         done = json_path_for(p).exists()
-        logger.info("  %d. %s%s", i, p.relative_to(root).as_posix(),
-                    "   (json finns — hoppas över)" if done else "")
+        try:
+            k.vakta_ljud(cfg, p)
+            not_ = "   (json finns — hoppas över)" if done else ""
+        except k.NamnFel:
+            sparrade += 1
+            not_ = "   (SPÄRRAD — namnkollision)"
+        logger.info("  %d. %s%s", i, p.relative_to(root).as_posix(), not_)
+    if sparrade:
+        logger.warning("%d fil(er) spärrade av namnvakten — kör namnvakt.py för "
+                       "att se varför och vad som ska döpas om.", sparrade)
     if dry_run:
         logger.info("--dry-run: ingen transkribering körd.")
         return 0
@@ -166,6 +175,18 @@ def main() -> int:
         if json_path_for(audio).exists():
             logger.info("[%d/%d] hoppar över (json finns): %s", i, len(targets), audio.name)
             continue
+        # Namnvakten före arbetet: en kollision skulle låta den här körningen
+        # skriva över ett transkript som redan finns. Hoppa över, avbryt inte
+        # batchen — de övriga filerna är oskyldiga.
+        try:
+            for v in k.vakta_ljud(cfg, audio):
+                logger.warning("[%d/%d] VARNING: %s", i, len(targets), v)
+        except k.NamnFel as e:
+            logger.error("[%d/%d] SPÄRRAD %s: %s", i, len(targets), audio.name, e)
+            if e.atgard:
+                logger.error("       %s", e.atgard)
+            continue
+
         logger.info("[%d/%d] transkriberar: %s", i, len(targets), audio.name)
         try:
             dur, wall, nseg = transcribe_one(model, cfg, meta, audio, logger)

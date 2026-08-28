@@ -17,7 +17,6 @@ import logging
 import sys
 import time
 import tomllib
-import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -69,27 +68,10 @@ def autodetect_compute_type(configured: str, device: str) -> str:
 # Filnamn (File Naming Convention i CLAUDE.md)
 # --------------------------------------------------------------------------- #
 
-def normalize_stem(stem: str) -> str:
-    """Gemener, bindestreck, ASCII, aldrig understreck."""
-    # 3. Translitterera icke-ASCII (å->a, ä->a, ö->o, accenter -> basbokstav).
-    decomposed = unicodedata.normalize("NFKD", stem)
-    ascii_only = decomposed.encode("ascii", "ignore").decode("ascii")
-    # 1. Gemener.
-    s = ascii_only.lower()
-    # 2. Mellanslag och understreck -> bindestreck.
-    out = []
-    for ch in s:
-        if ch in " _":
-            out.append("-")
-        elif ("a" <= ch <= "z") or ("0" <= ch <= "9") or ch == "-":
-            out.append(ch)
-        # 4. Allt annat tas bort.
-    s = "".join(out)
-    # 5. Kollapsa flera bindestreck.
-    while "--" in s:
-        s = s.replace("--", "-")
-    # 6. Strippa ledande/avslutande bindestreck.
-    return s.strip("-")
+# Regeln bor i korrigeringar.py — den fanns i två identiska exemplar, och två
+# exemplar av en namnregel är en framtida divergens. Aliaset behålls för att
+# batch-transkribera.py importerar t.normalize_stem.
+normalize_stem = k.normalize_stem
 
 
 # --------------------------------------------------------------------------- #
@@ -127,6 +109,19 @@ def main() -> int:
     if not audio_path.is_file():
         logger.error("Ljudfilen saknas: %s", audio_path)
         return 1
+
+    # Namnvakt. Två ljudfiler som normaliserar till samma stam skriver samma
+    # .json — den som körs sist raderar den förstas transkript utan ett ord.
+    # Kontrollen ligger före modellinladdningen: ett namnfel ska aldrig kosta
+    # en halvtimmes CPU först.
+    try:
+        for v in k.vakta_ljud(cfg, audio_path):
+            logger.warning("VARNING: %s", v)
+    except k.NamnFel as e:
+        logger.error("FEL: %s", e)
+        if e.atgard:
+            logger.error("     %s", e.atgard)
+        return 2
 
     model_name = cfg["model"]["name"]
     device = autodetect_device(cfg["model"]["device"])

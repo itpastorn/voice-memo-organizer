@@ -53,6 +53,19 @@ def main() -> int:
         print("\nFEL: transkriptet saknas på disk.", file=sys.stderr)
         return 1
 
+    # Namnvakten rapporteras men avbryter inte: aktuell.py skriver ingenting och
+    # ska kunna visa läget även för en fil som pipelinen vägrar bearbeta — det är
+    # ju just då man vill se varför.
+    try:
+        for v in k.vakta_transkript(cfg, json_path):
+            print()
+            print(f"VARNING:  {v}")
+    except k.NamnFel as e:
+        print()
+        print(f"SPÄRRAD:  {e}")
+        if e.atgard:
+            print(f"          {e.atgard}")
+
     data = las(json_path)
     ord_antal = sum(len(s.get("words") or []) for s in data.get("segments", []))
     langd = data.get("duration")

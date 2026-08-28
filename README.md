@@ -20,14 +20,31 @@ source setup.sh          # funkar från projektet och från datamappen
 vmohjalp                 # listar kommandona
 ```
 
-Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `propagera`,
-`applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
+Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
+`propagera`, `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
 fungerar när du vill åt något som inte har en genväg.
 
 [setup.sh](setup.sh) i projektet är originalet; datamappens `setup.sh` är en rad
 som sourcar det, och är enda stället med en absolut sökväg.
+
+### 0. Kontrollera filnamnen
+
+```bash
+namnvakt                 # vad är spärrat, och varför
+namnvakt --alla          # plus varje avvikande ljudfilnamn
+```
+
+Skripten kör vakten själva och stoppar den enskilda filen; det här är
+översikten. Den spärrar **kollisioner**, inte konventionsbrott: 113 av 363
+ljudfiler har versaler och det är ofarligt — utdata normaliseras ändå. Men när
+två ljudfiler får samma normaliserade stam skriver de samma `.json`, och den ena
+inspelningen kommer aldrig in i pipelinen. Sex filer är spärrade idag; en av dem
+dolde 47 minuter ljud som aldrig kunnat transkriberas
+(`zego-torpseminarium.aac`). Åtgärden är alltid att döpa om ljudet så att
+stammarna blir unika i hela arkivet — `granska/state/` är platt, så det räcker
+inte att de skiljer sig inom mappen.
 
 ### 1. Transkribera (steg a) — dyrt, allt annat är billigt
 
@@ -126,6 +143,7 @@ i config.toml. `aktuell.py` visar valet i förväg.
 | Vill du... | Gör så |
 | --- | --- |
 | veta vilken fil som är vald | `aktuell` — fil, mapp, flaggor kvar, applicerad eller ej |
+| se vilka filnamn som spärrar pipelinen | `namnvakt` (`--alla` listar även de ofarliga avvikelserna) |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |
 | köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `"$PY" "$VMO/transkribera.py"` |
@@ -339,7 +357,13 @@ När granskningen är klar skrivs besluten in i JSON:en:
 
 ```powershell
 ./venv/Scripts/python.exe applicera-corrections.py
+./venv/Scripts/python.exe applicera-corrections.py --dry-run   # räknar allt, skriver inget
 ```
+
+`--dry-run` gör hela beräkningen och låter varje vakt smälla, men skriver
+ingenting — siffrorna är alltså riktiga och inte uppskattade. Skriptet tar
+**ingen filsökväg**; filen väljs i GUI:t. Ett argument som inte känns igen
+avbryter med exit-kod 2 i stället för att ignoreras.
 
 **Vilken fil?** `granska/current.json` — alltså den du valt i GUI:t — annars
 `data.test_file` i config.toml. Rapporten skriver ut vilken fil som träffades och

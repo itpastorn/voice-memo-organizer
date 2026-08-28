@@ -146,6 +146,8 @@ def main() -> int:
         print(f"FEL: JSON saknas: {json_path}", file=sys.stderr)
         return 1
 
+    k.vakta_eller_avsluta(cfg, json_path)
+
     data = json.loads(json_path.read_text(encoding="utf-8"))
     if not data.get("corrections_applied_at"):
         print("FEL: JSON:en saknar corrections_applied_at.", file=sys.stderr)
