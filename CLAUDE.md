@@ -69,7 +69,7 @@ Konkret:
 - **Ingen hårdkodad `device` eller `compute_type`.** De läses ur konfiguration med
   autodetektering som standard: finns CUDA → `cuda` + `float16`, annars `cpu` +
   `int8`. En körning på arbetsstationen ska kräva noll kodändringar.
-- **Modellstorleken är konfiguration, inte konstant.** `kb-whisper-medium` idag,
+- **Modellstorleken är konfiguration, inte konstant.** `kb-whisper-small` idag,
   `kb-whisper-large` när VRAM finns. Samma kodväg.
 - **All maskinberoende inställning på ett ställe** — en `config.py` eller
   `config.toml` i projektroten. Trådantal, batchstorlek, `beam_size`, modellcache.
@@ -117,13 +117,67 @@ isolerat.
 KBLabs svenska Whisper (`KBLab/kb-whisper-*`) via faster-whisper / CTranslate2,
 int8 på CPU.
 
-- **Standardmodell: `kb-whisper-medium`.** `kb-whisper-large` körs på begäran
-  för viktiga filer och skriver över medium-utdata.
+- **Standardmodell: `kb-whisper-small`** sedan 2026-09-04. `kb-whisper-large`
+  körs på begäran för viktiga filer och skriver över utdatan. Underlaget står
+  nedan — det vänder på det förväntade, och därför är det värt att läsa noga.
+- **Arkivet är blandat: 82 transkript med `medium`, 201 med `small`.** Ingenting
+  behöver göras åt det: JSON:en bär `model`, så varje fil är självförklarande, och
+  en omtranskribering skulle radera granskningsbesluten (sidecarens `global_index`
+  refererar den gamla textens ordpositioner). Blanda alltså med flit.
+- **Mätningarna längre ner i det här dokumentet gjordes på `medium`** —
+  ordlisteprovens tre tabeller, ord-konfidensens median ~0,69, hastighetsspannet
+  i Hårdvara. De är inte omprövade på small och ska inte läsas som om de vore.
 - Producerar tre filer per ljudklipp: `.json` (fullt Whisper-utdata med
   ord-nivå-tidsstämplar), `.srt`, `.txt`.
 - JSON:en är sanningskällan. Allt nedströms härleds ur den.
 - Direkt efter transkriberingen körs steg **f** en första gång och sätter
   preliminära metadatataggar på ljudfilen.
+
+**Modellvalet är mätt (2026-09-04), och utfallet vänder på det förväntade.**
+Mätningen gjordes i ett annat, liknande KB-Whisper-projekt: alla tre modellerna
+på samma 3-minutersutdrag, med `large` som facit.
+
+| Modell | Ord | Överensstämmelse med large | Kvot vägg/ljud |
+| --- | --- | --- | --- |
+| **small** | 398 | **93,6 %** | ~0,49× |
+| medium | 355 | 80,1 % | ~0,85× |
+| large | 414 | (facit) | ~1,67× |
+
+Small är alltså både snabbare **och** närmare large än vad medium är. Det är inte
+vad modellstorlek normalt ger, och därför bytte projektet standardmodell.
+
+**Applicerat på det här arkivet.** Uppmätt med `ffprobe` 2026-09-04: **277
+ljudfiler utan transkript, 60,5 timmar** (82 filer / 18,8 h är redan gjorda).
+Ursprungsprognosen räknade på 24,6 h — det här arkivet är alltså 2,5 gånger
+större, och skillnaden mellan modellerna växer i samma takt:
+
+| Modell | CPU-tid för de 60,5 h som återstår |
+| --- | --- |
+| small | ~30 h |
+| medium | ~52 h |
+| large | ~101 h |
+
+Valet av small mot medium är alltså värt **drygt 20 timmars CPU** på den här
+maskinen — och mot large drygt 70.
+
+**Två förbehåll, som hör till protokollet.**
+
+*Medium tappade ord.* 355 ord mot larges 414 är 14 % färre. Redan det sätter ett
+tak kring 86 % på överensstämmelsen, och 80,1 % ligger nära taket — siffran mäter
+alltså sannolikt ett **bortfall** hos medium mer än sämre ordträffsäkerhet. Det
+gör inte medium bättre: bortfall är den farligaste felklassen i det här projektet,
+eftersom flytande text döljer det (jfr issue #1 och negationsvakten, som finns just
+för att en tappad negation vänder en sats utan att synas). Men slutsatsen "small
+är 13 procentenheter noggrannare än medium" är inte det mätningen visar.
+
+*Ett utdrag, en fil.* n = 1, tre minuter. Samma försiktighet gäller som för
+propageringströskeln: överanpassning mot en enda fil är en verklig risk. Hade
+utdraget råkat vara det där medium tappade en bit, är rangordningen mellan small
+och medium svagare än tabellen antyder. Hastighetskolumnen är däremot robust —
+den följer modellstorleken och stämmer med projektets egna mätningar.
+
+Sammantaget: **beslutet står på hastigheten, som är säker, och stöds av
+kvalitetssiffran, som är suggestiv.** Ingenting i mätningen talar för medium.
 
 **Ordlisteprompt — kända ord matas in i förväg.** Whisper får aldrig memots eget
 nyckelord rätt av sig själv: *ungjordskreationism* förvanskades fyra gånger i samma
@@ -184,7 +238,10 @@ som redan löst att `Nadia Bolz-Weber` fick detektorn att missa `Shawn Bolz`.
 
 Låg konfidens flaggas för manuell rättning — men **inte** ur ord-konfidens.
 `kb-whisper-medium` ger genomgående låga ord-`probability` på Lars ljud (median
-~0,69), och de flesta felen i Lars stora felklass — egennamn och engelska
+~0,69) — mätt på medium och **inte** omprövat på small, som är standard sedan
+2026-09-04. Slutsatsen bör hålla ändå, eftersom den vilar på *vilka* ord som får
+hög konfidens och inte på nivån; men siffran är medium-siffran.
+De flesta felen i Lars stora felklass — egennamn och engelska
 låneord — får *hög* konfidens (modellen är tryggt fel: `dik`=0,91 för "geek").
 Ord-konfidens korrelerar alltså bara löst med faktiska fel; en tröskel på den
 missar systematiskt just det man bryr sig om. Detektorn är i stället en LLM.
@@ -523,8 +580,8 @@ låt inget beslut omöjliggöra det — särskilt inte blockindelningen i steg c
 ## Körning
 
 **Batch, inte realtid.** Se hårdvaran nedan. Filbevakning som triggar
-transkribering direkt vid uppladdning är avfärdat — en `kb-whisper-medium`-körning
-äter datorn i minuter.
+transkribering direkt vid uppladdning är avfärdat — en körning äter datorn i
+minuter (uppmätt på medium; small är snabbare men inte snabb).
 
 - Ett skript upptäcker ljudfiler som saknar utdata och köar dem.
 - Körs manuellt eller via Windows Task Scheduler, lämpligen nattetid.
@@ -553,11 +610,13 @@ se Portabilitet ovan.
 | Python | 3.12 |
 
 Ingen CUDA. Whisper körs int8 på CPU. `kb-whisper-large` landar kring realtid
-eller långsammare — en halvtimmes memo tar en halvtimme eller mer. Därför medium
-som standard.
+eller långsammare — en halvtimmes memo tar en halvtimme eller mer. Därför en
+mindre modell som standard: **`small` sedan 2026-09-04**, dessförinnan medium.
 
 **Hastigheten varierar oförklarat och kan inte planeras på (issue #8).** Uppmätt
-på medium/CPU/int8, samma maskin och samma inställningar:
+på **medium**/CPU/int8, samma maskin och samma inställningar. Tabellen är alltså
+inte längre standardmodellens siffror — small bör ligga lägre, men det är
+omätt, och spannets *storlek* är poängen och den lär bestå:
 
 | Kvot vägg/ljud | Omständighet |
 | --- | --- |
@@ -569,9 +628,9 @@ på medium/CPU/int8, samma maskin och samma inställningar:
 
 Spannet är **3,5×** mellan bästa och sämsta. **Räkna inte på 0,56× när arkivet
 planeras** — skillnaden mellan 0,8× och 1,5× är ungefär hundra timmar CPU på de
-~348 återstående filerna. Hypotes värd att pröva: `cpu_threads = 0` (auto) låter
-CTranslate2 välja trådantal utifrån maskinens tillfälliga last. Ett explicit
-värde skulle göra mätningarna jämförbara.
+277 återstående filerna (60,5 h ljud). Hypotes värd att pröva: `cpu_threads = 0`
+(auto) låter CTranslate2 välja trådantal utifrån maskinens tillfälliga last. Ett
+explicit värde skulle göra mätningarna jämförbara.
 
 Planerad maskin: stationär med gott om VRAM. Då blir `kb-whisper-large` +
 `float16` på `cuda` standardvalet, och batch nattetid blir onödigt.

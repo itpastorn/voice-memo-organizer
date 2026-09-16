@@ -206,18 +206,38 @@ inte hos domänen, och detektorn klarade tre domäner där ordlistan var tom.
 
 ## Modellen: KBLab kb-whisper via faster-whisper
 
-`KBLab/kb-whisper-medium` distribuerar **CTranslate2-vikterna direkt i repo-roten
-på Hugging Face** (`model.bin` + `config.json` + `vocabulary.json` +
+**Standardmodell: `KBLab/kb-whisper-small`** sedan 2026-09-04. Utfallet vänder på
+det förväntade — small ligger **närmare** `large` än vad `medium` gör (93,6 % mot
+80,1 % överensstämmelse på samma utdrag) och är dessutom dubbelt så snabb. Hela
+underlaget med förbehåll står i [CLAUDE.md](CLAUDE.md), steg a.
+
+| Modell | Överensstämmelse med large | Kvot vägg/ljud | De 60,5 h som återstår |
+| --- | --- | --- | --- |
+| **small** | **93,6 %** | ~0,49× | ~30 h |
+| medium | 80,1 % | ~0,85× | ~52 h |
+| large | (facit) | ~1,67× | ~101 h |
+
+Dessförinnan `medium` — de 85 befintliga transkripten är gjorda med den, och det
+är inget problem: JSON:en bär `model`, så varje fil är självförklarande.
+Transkribera **inte** om dem för att byta modell; sidecarens ordindex refererar
+den gamla texten, och granskningsbesluten skulle gå förlorade.
+
+KBLabs modeller distribuerar **CTranslate2-vikterna direkt i repo-roten på
+Hugging Face** (`model.bin` + `config.json` + `vocabulary.json` +
 `tokenizer.json`). faster-whisper laddar modellnamnet rakt av:
 
 ```python
-WhisperModel("KBLab/kb-whisper-medium", ...)
+WhisperModel("KBLab/kb-whisper-small", ...)
 ```
 
 **Ingen `ct2-transformers-converter` behövs.** Verifierat mot modellkortet
-(2026-07). Samma gäller `kb-whisper-large` när VRAM finns; byt bara `model.name` i
-`config.toml`. Revision väljs via `model.revision`: `""` (standard), `"subtitle"`
-(kondenserad), `"strict"` (mer verbatim).
+(2026-07) och mot filbladet för `small` och `medium` (2026-09-04) — identisk
+layout, så bytet är en rad i `config.toml` och ingen kodändring. Samma gäller
+`kb-whisper-large` när VRAM finns. Revision väljs via `model.revision`: `""`
+(standard), `"subtitle"` (kondenserad), `"strict"` (mer verbatim).
+
+Vikterna laddas ner till `models/` första gången (~0,5 GB för small, ~1,5 GB för
+medium). Den gamla medium-cachen kan ligga kvar — den kostar bara disk.
 
 ## Installation
 
@@ -262,11 +282,13 @@ Batchen är idempotent (hoppar över filer som redan har `.json`) och utesluter
 ljudlängd och väggtid till stdout och `logs/transkribering.log` — för jämförelse
 laptop/arbetsstation.
 
-**Hastigheten går inte att planera på.** Uppmätt på samma maskin och inställningar:
-0,56× (referensen), 0,76–0,82×, 0,99×, 1,25–1,31×, och 1,52–1,99× med
-ordlisteprompt. Spannet är 3,5× och orsaken är okänd — se issue #8. Räkna inte på
-bästafallet: skillnaden mellan 0,8× och 1,5× är ~100 timmar CPU på arkivets
-återstående filer.
+**Hastigheten går inte att planera på.** Uppmätt på **medium**, samma maskin och
+inställningar: 0,56× (referensen), 0,76–0,82×, 0,99×, 1,25–1,31×, och 1,52–1,99×
+med ordlisteprompt. Spannet är 3,5× och orsaken är okänd — se issue #8. Räkna
+inte på bästafallet: skillnaden mellan 0,8× och 1,5× är ~100 timmar CPU på de
+60,5 timmar ljud som återstår (277 av 363 filer, uppmätt 2026-09-04). Siffrorna
+är inte omprövade sedan bytet till `small`, som bör ligga lägre — men spannets
+storlek lär bestå.
 
 **Transkriberar du om en fil** varnar skriptet om det redan finns härledda filer
 (`-corrections.*`, `-bak*.json`). De indexerar den gamla texten och måste bort

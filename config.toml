@@ -8,13 +8,15 @@ root = "C:/Users/gunther/Dropbox/arkiv/mediadev/transkribera"
 test_file = "meta-admin-todo-fix/zego-ai-praktisk-nytta-i-kyrkan.m4a"
 
 [model]
-# Modellstorlek är konfiguration, inte konstant. medium nu, large när VRAM finns.
-name = "KBLab/kb-whisper-medium"
+# Modellstorlek är konfiguration, inte konstant. small nu (Lars mätningar på den
+# här maskinen 2026-09-04), large när VRAM finns.
+name = "KBLab/kb-whisper-small"
 # "auto" = autodetektera (cuda om tillgängligt, annars cpu). Tvinga med "cuda"/"cpu".
 device = "auto"
 # "auto" = float16 på cuda, int8 på cpu. Kan tvingas, t.ex. "int8_float16".
 compute_type = "auto"
-# Modellcache. Vikterna (~1,5 GB för medium) laddas ner hit första gången.
+# Modellcache. Vikterna (~0,5 GB för small, ~1,5 GB för medium) laddas ner hit
+# första gången.
 # Relativt projektroten om inte absolut sökväg.
 download_root = "models"
 # Whisper-revision på Hugging Face:
