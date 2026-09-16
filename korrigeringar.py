@@ -537,15 +537,30 @@ def likhet(a: str, b: str) -> float:
 ORDLISTA_DIR = PROJECT_ROOT / "ordlista"
 
 
+def ar_inkorg(cfg: dict, mappnamn: str | None) -> bool:
+    """Är mappen inkorgen? Jämförs skiftlägesokänsligt: på Windows är
+    'Incoming' och 'incoming' samma mapp, och en inkorg som felaktigt tas för
+    ett tema ger tyst fel ordlista."""
+    inkorg = cfg["data"].get("incoming")
+    return bool(inkorg and mappnamn and mappnamn.lower() == inkorg.lower())
+
+
 def temamapp_for(cfg: dict, path: Path) -> str | None:
-    """Temamappens namn för en fil under datamappens rot, eller None för filer
-    som ligger direkt i roten (inkorgen — temat är ännu okänt). Bara den första
-    nivån räknas; djupare undermappar tillhör sin temamapp."""
+    """Temamappens namn för en fil under datamappens rot, eller None när temat
+    är okänt: filen ligger direkt i roten, eller i inkorgen (`data.incoming`).
+    Bara den första nivån räknas; djupare undermappar tillhör sin temamapp.
+
+    Inkorgen MÅSTE ge None. Fram till 2026-09-16 gav en fil i incoming/ temat
+    "incoming", och load_ordlista("incoming") letade efter ordlista/incoming.txt,
+    hittade den inte och gav bara basen — 8 termer i stället för 132. Tyst, i
+    alla fyra skript som flaggar."""
     try:
         rel = Path(path).resolve().relative_to(Path(cfg["data"]["root"]).resolve())
     except ValueError:
         return None
-    return rel.parts[0] if len(rel.parts) > 1 else None
+    if len(rel.parts) <= 1 or ar_inkorg(cfg, rel.parts[0]):
+        return None
+    return rel.parts[0]
 
 
 def _las_termfil(path: Path) -> list[str]:

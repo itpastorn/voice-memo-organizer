@@ -4,6 +4,10 @@
 [data]
 # Rot för allt ljud (inkorgen + temamappar). Ligger utanför projektet.
 root = "C:/Users/gunther/Dropbox/arkiv/mediadev/transkribera"
+# Inkorgen: undermapp under root där nya inspelningar laddas upp. Filerna ligger
+# kvar här genom hela kedjan och sorteras till en temamapp sist. En fil här har
+# inget tema — temamapp_for() ger None, och ordlistan väljs av temagissningen.
+incoming = "incoming"
 # Steg 1: en enda hårdkodad testfil, relativt root. Byts för hand.
 test_file = "meta-admin-todo-fix/zego-ai-praktisk-nytta-i-kyrkan.m4a"
 

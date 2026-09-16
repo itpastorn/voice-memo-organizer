@@ -40,7 +40,7 @@ Skripten kör vakten själva och stoppar den enskilda filen; det här är
 översikten. Den spärrar **kollisioner**, inte konventionsbrott: 113 av 363
 ljudfiler har versaler och det är ofarligt — utdata normaliseras ändå. Men när
 två ljudfiler får samma normaliserade stam skriver de samma `.json`, och den ena
-inspelningen kommer aldrig in i pipelinen. Sex filer är spärrade idag; en av dem
+inspelningen kommer aldrig in i pipelinen. Sju filer är spärrade idag; en av dem
 dolde 47 minuter ljud som aldrig kunnat transkriberas
 (`zego-torpseminarium.aac`). Åtgärden är alltid att döpa om ljudet så att
 stammarna blir unika i hela arkivet — `granska/state/` är platt, så det räcker
@@ -70,16 +70,17 @@ Linux där ljudknappen tystnar.
 
 ### 1. Transkribera (steg a) — dyrt, allt annat är billigt
 
-Ställ dig i temamappen med ljudet:
+Nya inspelningar laddas upp i **`incoming/`** och ligger kvar där genom hela
+kedjan; de sorteras till en temamapp sist. Ställ dig i mappen med ljudet:
 
 ```bash
-cd /c/Users/gunther/Dropbox/arkiv/mediadev/transkribera/NAR-profetrorelsen
+cd /c/Users/gunther/Dropbox/arkiv/mediadev/transkribera/incoming
 harmapp --dry-run     # se vad som skulle köras
 harmapp               # kör allt i mappen (idempotent — hoppar över klara)
 ```
 
 `harmapp` tar ljudet i mappen du står i. Vill du styra urvalet själv finns
-`batch`, men då **behövs `"$PWD"/`** — utan den letar skriptet i inkorgen:
+`batch`, men då **behövs `"$PWD"/`** — utan den letar skriptet i datamappens rot:
 
 ```bash
 files=("$PWD"/*.m4a); batch "${files[@]:0:3}"   # bara de tre första
@@ -305,7 +306,7 @@ Prompten byggs per fil av **`ordlista/gemensam.txt` + `ordlista/<temamapp>.txt`*
 | Skickas som | faster-whispers **`hotwords`** — `initial_prompt` når bara första 30-sekundersfönstret när `condition_on_previous_text=false` |
 | Tak | **223 tokens** (`448//2-1`), exakt räknat med modellens egen tokenizer |
 | Prioritet | basen överlever alltid; mappens termer kapas bakifrån och **loggas** |
-| Inkorgen | bara basen — temat är okänt tills filen sorterats |
+| `incoming/` | bara basen — temat är okänt tills filen sorterats, och 223 tokens rymmer inte hela listan |
 | Av/på | `transcription.ordlista_prompt` i config.toml |
 
 `transcription.prompt_bas` byter basfil när materialet inte är Lars egna memon.

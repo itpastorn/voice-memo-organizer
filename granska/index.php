@@ -64,7 +64,13 @@ $harLjud = is_file($dataDir . '/' . ($cur['audio_file'] ?? ''));
 $statusAlla = json_decode(@file_get_contents($here . '/status.json'), true) ?: [];
 $filStatus = $statusAlla[$cur['transcript_json']] ?? null;
 $temamapp = dirname($cur['transcript_json']);
-$temamapp = ($temamapp === '.' || $temamapp === '') ? '(inkorgen)' : $temamapp;
+// Inkorgen är ingen temamapp. Namnet speglar config.toml:s data.incoming, som PHP
+// inte läser — INKORG i compose.yaml kan sätta det, annars gäller 'incoming'.
+// Jämförs skiftlägesokänsligt, som korrigeringar.ar_inkorg().
+$inkorg = getenv('INKORG') ?: 'incoming';
+$forstaDel = explode('/', $temamapp)[0];
+$temamapp = ($temamapp === '.' || $temamapp === '' || strcasecmp($forstaDel, $inkorg) === 0)
+    ? '(inkorgen)' : $temamapp;
 
 // Platta ut orden EXAKT som korrigeringar.flatten_words (samma globala index).
 $words = [];

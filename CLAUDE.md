@@ -53,11 +53,15 @@ Batch finns för **alla** körbara steg: a, b, apply och c. `data.test_file` byt
 för hand men läses numera bara av steg a — allt efter granskningen följer GUI:ts
 filval (`aktuell.py` visar vilken det är).
 
-**Namnvakten spärrar sex filer** (`namnvakt.py`) — se File Naming Convention.
+**Namnvakten spärrar sju filer** (`namnvakt.py`) — se File Naming Convention.
 Ett av fallen dolde 47 minuter ljud som aldrig kunnat transkriberas.
 
-**Kvar av arkivet: ~348 av 355 ljudfiler.** Det är den stora återstående
-kostnaden, och den blockeras av issue #9 (se Körning).
+**Arkivet är till största delen transkriberat (2026-09-16).** 286 transkript, varav
+201 med `small` (körda 2026-09-05–06) och 82 med `medium`. **Kvar: 80 ljudfiler,
+17,8 timmar** — mätt med `ffprobe`. Fyra av dem ligger i `incoming/`.
+
+**Helhetsflödet ändrades 2026-09-16** — nya inspelningar går via `incoming/` och
+sorteras sist. Se Pipeline.
 
 ## Portabilitet — laptop idag, arbetsstation imorgon
 
@@ -90,7 +94,9 @@ Ljudet ligger **inte** i detta projekt utan i:
 C:\Users\gunther\Dropbox\arkiv\mediadev\transkribera\
 ```
 
-- **Rotmappen är inkorgen.** Nya, osorterade `zego-*.m4a` hamnar här.
+- **`incoming/` är inkorgen** (`data.incoming` i config.toml). Nya inspelningar
+  laddas upp här och ligger kvar genom hela kedjan tills de sorteras. Roten
+  innehåller inget ljud längre, bara skillfiler som inte hör till projektet.
 - **Undermapparna är temataxonomin.** `trump-politik/`, `NAR-profetrorelsen/`,
   `wimber-vineyard/`, `helande-dunamis/`, `bibelsyn-lib-fund-equmeniakyrkan/`,
   `israel-palestina-antisemitism/`, `skapelse-evolution-vetenskap-apologetik/`,
@@ -109,8 +115,135 @@ allt vi **producerar**.
 
 ## Pipeline
 
-Fem steg (a–e) plus ett löpande (f). Varje steg är idempotent och kan köras om
-isolerat.
+Varje steg är idempotent och kan köras om isolerat.
+
+### Helhetsflödet (sedan 2026-09-16)
+
+```text
+incoming/  →  zego-prepare  →  normalisering  →  a transkribering
+           →  b flaggning + granskning  →  c förbättring
+           →  f metadatataggar + d QDA-taggning
+           →  sortering till temamapp (förslag, Lars godkänner)
+           →  e databas, RAG ...
+```
+
+Den stora förändringen mot tidigare är att **sorteringen sker sist**. Filerna
+ligger i `incoming/` genom hela kedjan och flyttas en gång, när allt är klart.
+
+| Beslut | |
+| --- | --- |
+| Normalisering mot "rör aldrig originalljudet" | normaliserad **kopia**; originalet orört |
+| Vilken fil är ljudfilen nedströms | **originalet**; den normaliserade kastas efter steg a |
+| Var filerna ligger under bearbetning | kvar i `incoming/` tills sorteringen |
+| Sorteringen | **föreslår, Lars godkänner** |
+
+**Byggt:** `incoming/` som inkorg. **Väntar:** normaliseringen (lånas från ett
+annat projekt), sorteringsalgoritmen (bygger på QDA-koderna, som väntar på
+kodboken). Flytten själv finns redan — `synka-namn.py` tar hela den härledda
+familjen, arbetskopian i `granska/state/` och pekarfälten. Sorteringen blir
+"flytta ljudet + kör synka", med ett godkännandesteg framför.
+
+**`zego-prepare`** är ett Git Bash-alias för
+`workspace/adminscripts/zego-prepare.sh` — ett annat repo, inte en del av det här
+projektet. Det döper **bara om** `.m4a`-filerna i en mapp, i tre steg: stryker
+inledande "Lars Gunther", normaliserar namnet via `normalize-filenames.sh`, och
+lägger till `zego-`. Ljudinnehållet rörs inte, och "normalisera" i skriptet
+betyder filnamn, inte ljud.
+
+Allt skriptet producerar är en fixpunkt för projektets `normalize_stem()` —
+uppmätt på sex knepiga titlar — så pipelinen och skriptet är överens om namnet
+**efteråt**. På råa titlar skiljer reglerna sig däremot: adminskriptet ersätter
+otillåtna tecken med bindestreck, projektets regel stryker dem (`don't panic` →
+`zego-don-t-panic` respektive `zego-dont-panic`). **Ordningen är därför ett krav:
+förbered först, transkribera sedan.** Transkriberas en fil innan den förberetts
+får transkriptet en annan stam än ljudet får efteråt, och de härledda filerna blir
+föräldralösa (det `synka-namn.py` finns för att laga).
+
+**Två fel hittade 2026-09-16, provade på testfiler — inte åtgärdade, de bor i
+adminscripts:**
+
+- **Namnkrock raderar en inspelning.** Steg 1 och 3 gör `mv` utan att kontrollera
+  om målet finns. Prov: fem testfiler in, tre ut, exit 0 och "Klar." —
+  `generation.m4a` skrev över en *annan* `zego-generation.m4a`, och
+  `Lars Gunther predikan.m4a` skrev över en *annan* `predikan.m4a`. Steg 2
+  (`normalize-filenames.sh`) kontrollerar och hoppar över; de två stegen runt det
+  gör det inte. Det är det enda i hela flödet som kan förstöra originalljud, och
+  arkivet har redan en fil med två olika inspelningar under samma stam
+  (`zego-torpseminarium`).
+- **Undantagslistan ger versaler.** `normalize-filenames.sh` behåller etablerade
+  versalnamn (README, TODO, **MEMORY**, SECURITY, …). Ett memo med titeln
+  "Memory" blev `zego-MEMORY.m4a`. Ofarligt för pipelinen — utdata normaliseras
+  ändå, och namnvakten varnar — men listan är gjord för projektfiler, inte memon.
+
+Molnvarningen i skriptet (namnbyte i synkad mapp kan ge 0 B-filer) känner igen
+Google Drive, OneDrive och iCloud men **inte Dropbox**, där `incoming/` ligger.
+Om Dropbox har samma problem är inte prövat.
+
+**Felet som flödet utlöste.** `temamapp_for()` returnerade första sökvägsdelen,
+så en fil i `incoming/` fick temat `"incoming"`. `load_ordlista("incoming")`
+letade då efter `ordlista/incoming.txt`, hittade den inte och gav **bara basen —
+8 termer i stället för 132**. Tyst, i alla fyra skript som flaggar
+(`flagga-llm`, `batch-flagga`, `granska-igen`, `propagera-namn`), och det hade
+slagit till på de fyra första filerna i `incoming/`. Rättat: inkorgen ger `None`,
+och `None` ger hela listan — det dokumenterade inkorgsbeteendet. Verifierat att
+ingen av de 286 sorterade filerna fick ändrat tema.
+
+**Designkrav för normaliseringen**, låsta innan steget kommer:
+
+- En **intern detalj i steg a**: ffmpeg till tempfil → transkribera → radera.
+  `audio_file` pekar på originalet.
+- **Längden måste bevaras.** Ändrar filterkedjan ljudets längd stämmer ordens
+  tidsstämplar inte längre mot originalet: GUI:ts ljudloop spelar fel ställe, och
+  `synka-namn.py`:s längdbevis (JSON:ens `duration` mot `ffprobe` på originalet)
+  slutar fungera. `loudnorm` bevarar längden, `silenceremove` gör det inte. Mät
+  med `ffprobe` efteråt och vägra vid avvikelse över ~0,1 s.
+- JSON:en bär filterkedjan (`normalisering`), annars går en normaliserad och en
+  onormaliserad körning inte att skilja åt.
+
+**Temagissning före flaggningen — prövad och underkänd.** Planen var att en fil i
+`incoming/` skulle få en preliminär temagissning som valde ordlista, eftersom
+scopningen är uppmätt att spela roll (se steg b, Bolz). Deterministisk
+träffräkning: hur många termer ur varje `ordlista/<mapp>.txt` som förekommer i
+transkriptet. Mätt mot de 286 sorterade transkripten, med två facitregler — en fil
+i en mapp med lista ska få den listan; en fil i en av de fem mappar som saknar
+lista ska få `None` (hela listan), eftersom en annan mapps lista vore ett fel.
+
+Felen är inte symmetriska, och det avgör: `None` ger hela listan (brusigare, men
+inget missas), medan **fel lista tar bort mappens egna namn** — precis den skada
+scopningen skulle förebygga, fast värre.
+
+| Regel | Rätt lista | Föll tillbaka | **Fel lista** | Precision | Täckning |
+| --- | --- | --- | --- | --- | --- |
+| ≥ 1 träff, ingen marginal | 96 | 111 | **79** | 55 % | 41 % |
+| ≥ 1 träff, vinnaren 1,5× tvåan | 91 | 140 | **55** | 62 % | 41 % |
+| ≥ 2 träffar, 2× | 47 | 222 | **17** | 73 % | 24 % |
+| ≥ 3 träffar, 3× | 19 | 265 | **2** | 91 % | 10 % |
+
+Ingen tröskel fungerar. Med användbar täckning väljs fel lista för 55–79 filer; för
+att få ner felen måste den vara så sträng att den gissar på en av tio och annars
+faller tillbaka — vilket är detsamma som att inte gissa.
+
+**Skälet är att signalen saknas.** Median egna träffar per fil är 1 i
+`NAR-profetrorelsen` och `Kirk-TPUSA`, och **0** i `god-karismatik`,
+`meta-admin` och `bibelsyn`. Mellan 28 och 65 % av filerna nämner inte en enda
+term ur sin egen mapps lista. Egna listan slår alla andra i bara 47 % av filerna;
+38 % blir oavgjort. Gissningen vilar på namn, och **namn är den felklass Whisper
+är sämst på** — en term som förvanskats träffar inte.
+
+Inom samma mapp har `medium`-transkripten 1,5–3× högre täthet av egna termer än
+`small` (NAR: 2,54 mot 0,86 per 1000 ord). Riktningen är konsekvent, men
+medium-urvalen är 4–8 filer per mapp och sannolikt inte slumpmässiga — det var de
+filer som valdes ut först. **Antydan, inte fynd.** Värt att veta för modellvalet
+nedan, som redan bär förbehållet att medium-mätningen kan ha mätt bortfall.
+
+**Läckage var inget problem:** ordlistorna ändrades senast 2026-08-01, och det
+äldsta av de 286 transkripten är från 2026-08-12.
+
+Gissningen kopplades därför **inte** in. Filer i `incoming/` flaggas med hela
+listan. Nästa kandidat, om scopningen visar sig sakna i praktiken, är en
+LLM-klassificering på råtranskriptet (~$0,01/fil) — den läser innehåll och inte
+bara namn. Bygg den inte utan att först se att hela listan faktiskt ger sämre
+flaggning på inkorgsfiler; Bolz-fallet är ett enda uppmätt exempel.
 
 ### a. Transkribering
 
@@ -130,8 +263,8 @@ int8 på CPU.
 - Producerar tre filer per ljudklipp: `.json` (fullt Whisper-utdata med
   ord-nivå-tidsstämplar), `.srt`, `.txt`.
 - JSON:en är sanningskällan. Allt nedströms härleds ur den.
-- Direkt efter transkriberingen körs steg **f** en första gång och sätter
-  preliminära metadatataggar på ljudfilen.
+- Metadatataggarna (steg **f**) sätts **efter steg c**, inte direkt efter
+  transkriberingen — se Helhetsflödet. Album-taggen väntar dessutom på sorteringen.
 
 **Modellvalet är mätt (2026-09-04), och utfallet vänder på det förväntade.**
 Mätningen gjordes i ett annat, liknande KB-Whisper-projekt: alla tre modellerna
@@ -534,13 +667,15 @@ och en `.aac` tar äkta ID3. `mutagen` hanterar båda bakom samma API, så koden
 skiljer på formaten på ett ställe och inte i övrigt.
 
 **Tre tidpunkter.** Samma skript, körs om idempotent; senare körningar skriver
-över tidigare värden i de fält som fått nytt underlag.
+över tidigare värden i de fält som fått nytt underlag. Ordningen följer
+helhetsflödet: taggarna sätts efter steg c, och album-taggen först när filen
+sorterats — en fil i `incoming/` har inget tema att sätta.
 
 | När | Underlag | Vad som sätts |
 | --- | --- | --- |
-| efter **a** | filnamn + JSON | preliminär titel, artist, album, datum, längd |
-| efter **c** | `.md` | riktig titel ur rubriken, sammanfattning i kommentaren |
+| efter **c** | JSON + `.md` | titel ur rubriken, artist, datum, längd, sammanfattning i kommentaren |
 | efter **d** | kodboken | QDA-koder som genre/grupp |
+| efter **sortering** | temamappen | album |
 
 **Fälten:**
 
@@ -548,8 +683,8 @@ skiljer på formaten på ett ställe och inte i övrigt.
   titlar ska gå att känna igen som preliminära.
 - **Artist** — `Lars Gunther`.
 - **Album** — temamappens namn (`NAR-profetrorelsen`, `trump-politik`, ...). Gör
-  att mediaspelare grupperar memona per tema utan extra arbete. Memon i inkorgen
-  får ingen album-tagg förrän de sorterats.
+  att mediaspelare grupperar memona per tema utan extra arbete. Memon i
+  `incoming/` får ingen album-tagg förrän de sorterats.
 - **Datum** — inspelningsdatum ur den befintliga `creation_time` (Samsungs
   inspelningsapp sätter den). **Skriv aldrig över den med körningsdatum** — den
   är det enda spåret av när memot faktiskt spelades in.
@@ -680,7 +815,7 @@ Det farliga är i stället när normaliseringen får två filer att falla ihop:
 | samma stam i två temamappar | `granska/state/` är platt — sidecars skriver över varandra, och besluten landar i fel fil |
 | transkript vars egen stam inte är normaliserad | `json_path_for()` kan aldrig härleda fram till det; härledda namn blandas med grannens |
 
-**Sex filer är spärrade, och en av dem dolde ett verkligt tapp.**
+**Sex filer spärrades först, och en av dem dolde ett verkligt tapp.**
 `zego-torpseminarium.aac` (47:18) och `zego-torpseminarium.m4a` (54:20) är **två
 olika inspelningar** — inte samma ljud i två format. Bara `.m4a`:ns 54 minuter är
 transkriberade; `.aac`:ns 47 minuter har aldrig kunnat komma in i pipelinen,
@@ -690,6 +825,14 @@ format — 548,2794 s i båda — alltså ofarlig dubblett, men samma spärr.
 `zego-predikan-2` finns i två temamappar och fångas **innan** någon av dem
 transkriberats; hade båda körts hade den ena granskningen skrivit i den andras
 sidecar.
+
+**Den sjunde (2026-09-16) kom med `incoming/`.**
+`zego-liberalteologi-nagot-nytt-joel-halldorf.m4a` ligger både i `incoming/` och i
+`bibelsyn-lib-fund-equmeniakyrkan/` — **byte-identiska** (samma längd, storlek och
+hash), och ingen av dem har transkript. Vakten jämför stammar över hela arkivet
+oavsett mapp, så en fil som laddas upp i inkorgen men redan finns sorterad fångas
+innan den kostar CPU. Det är precis den dubbelregistrering ett flöde med en
+inkorg bjuder in till.
 
 Vakten skiljer därför på tre utfall: **spärrat** (avbryter, exit-kod 2),
 **varning** (körs vidare — t.ex. ett avvikande ljudfilnamn, eller ett transkript
@@ -808,12 +951,14 @@ Skriptet självt, kodboken och databasen bor i detta projekt
 2. **Blockkoder i markdown.** Frontmatter räcker för dokumentnivå. Hur märks
    enskilda block? HTML-kommentarer, en parallell `.codes.json`, eller något
    annat?
-3. **Sortering.** Ska pipelinen föreslå vilken temamapp ett memo i inkorgen hör
-   hemma i, eller gör Lars det för hand? Har fått vikt: temamappen styr numera
-   både ordlisteurvalet i steg b och album-taggen i steg f, så en osorterad fil
-   får sämre stöd.
-4. **De hundratal memon som redan finns.** ~348 av 355 återstår. Blockeras av
-   issue #9 (vänteläget) och försvåras av issue #8 (oförutsägbar hastighet).
+3. **Sortering — besvarad 2026-09-16.** Pipelinen föreslår temamapp, Lars
+   godkänner; sorteringen sker sist i kedjan. Kvar är *algoritmen*, som bygger
+   på QDA-koderna och därmed väntar på fråga 1. En billig förstagissning på
+   ordlisteträffar prövades för ett annat syfte och underkändes — se
+   Helhetsflödet; den duger inte heller som sorterare.
+4. **Resten av arkivet.** 80 ljudfiler / 17,8 h återstår (2026-09-16), ned från
+   277 / 60,5 h före körningen 2026-09-05–06. Issue #9 (vänteläget) är inte
+   åtgärdat i koden.
 5. **Hur hjälper man Whisper med ovanliga ord?** Ordlisteprompt via hotwords är
    prövad och underkänd (se steg a). Kvar att pröva: `kb-whisper-large` på
    arbetsstationen, revision-diff som flaggkälla (issue #5), eller att helt
