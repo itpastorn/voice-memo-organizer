@@ -137,9 +137,9 @@ ligger i `incoming/` genom hela kedjan och flyttas en gång, när allt är klart
 | Var filerna ligger under bearbetning | kvar i `incoming/` tills sorteringen |
 | Sorteringen | **föreslår, Lars godkänner** |
 
-**Byggt:** `incoming/` som inkorg. **Väntar:** normaliseringen (lånas från ett
-annat projekt), sorteringsalgoritmen (bygger på QDA-koderna, som väntar på
-kodboken). Flytten själv finns redan — `synka-namn.py` tar hela den härledda
+**Byggt:** `incoming/` som inkorg. **Väntar:** normaliseringen (källan finns,
+men nyttan är omätt — se nedan), sorteringsalgoritmen (bygger på QDA-koderna, som
+väntar på kodboken). Flytten själv finns redan — `synka-namn.py` tar hela den härledda
 familjen, arbetskopian i `granska/state/` och pekarfälten. Sorteringen blir
 "flytta ljudet + kör synka", med ett godkännandesteg framför.
 
@@ -159,17 +159,24 @@ förbered först, transkribera sedan.** Transkriberas en fil innan den förberet
 får transkriptet en annan stam än ljudet får efteråt, och de härledda filerna blir
 föräldralösa (det `synka-namn.py` finns för att laga).
 
-**Två fel hittade 2026-09-16, provade på testfiler — inte åtgärdade, de bor i
-adminscripts:**
+**Två fel hittade 2026-09-16, provade på testfiler. De bor i adminscripts:**
 
-- **Namnkrock raderar en inspelning.** Steg 1 och 3 gör `mv` utan att kontrollera
-  om målet finns. Prov: fem testfiler in, tre ut, exit 0 och "Klar." —
+- **Namnkrock raderade en inspelning — åtgärdat 2026-09-17** (adminscripts, grenen
+  `zego-prepare-namnkrock`). Steg 1 och 3 gjorde `mv` utan att kontrollera om
+  målet fanns. Prov: fem testfiler in, tre ut, exit 0 och "Klar." —
   `generation.m4a` skrev över en *annan* `zego-generation.m4a`, och
-  `Lars Gunther predikan.m4a` skrev över en *annan* `predikan.m4a`. Steg 2
-  (`normalize-filenames.sh`) kontrollerar och hoppar över; de två stegen runt det
-  gör det inte. Det är det enda i hela flödet som kan förstöra originalljud, och
-  arkivet har redan en fil med två olika inspelningar under samma stam
-  (`zego-torpseminarium`).
+  `Lars Gunther predikan.m4a` skrev över en *annan* `predikan.m4a`. Det var det
+  enda i hela flödet som kunde förstöra originalljud.
+
+  Nu räknar `zego-prepare` ut varje fils **slutnamn innan något flyttas**, och
+  vägrar hela körningen (exit 1, ingenting omdöpt) om två filer skulle hamna på
+  samma namn. Rapporten säger om de krockande filerna är byte-identiska
+  (`cmp -s`) — en dubblett kan raderas, olika innehåll är en inspelning som hade
+  gått förlorad. Regeln för steg 2 hämtas från `normalize-filenames.sh --namn`,
+  ett nytt läge, så att den bara finns på ett ställe. Dessutom `--dry-run` och ett
+  skyddsnät i själva flytten. Verifierat: omstruktureringen av
+  `normalize-filenames.sh` gav bit för bit identisk utskrift på 28 knepiga namn,
+  och krockfallet lämnar alla fem filer orörda.
 - **Undantagslistan ger versaler.** `normalize-filenames.sh` behåller etablerade
   versalnamn (README, TODO, **MEMORY**, SECURITY, …). Ett memo med titeln
   "Memory" blev `zego-MEMORY.m4a`. Ofarligt för pipelinen — utdata normaliseras
@@ -199,6 +206,42 @@ ingen av de 286 sorterade filerna fick ändrat tema.
   med `ffprobe` efteråt och vägra vid avvikelse över ~0,1 s.
 - JSON:en bär filterkedjan (`normalisering`), annars går en normaliserad och en
   onormaliserad körning inte att skilja åt.
+
+**Normaliseringen finns att låna, men mätningen talar emot att den behövs här
+(2026-09-16).** Källan är `ljud.py` i hestra-projektet, med en lånesinstruktion i
+dess `docs/lan-ljudsteget-till-voice-memo-organizer.md`: tvåpass `loudnorm`
+(−16 LUFS, −1,5 dBTP, LRA 11) efter förfiltret `highpass=f=80` + lätt kompressor,
+självrättande offset, mätning av resultatet, och markering av trasiga
+inspelningar (under −50 LUFS eller under 1 LU). Instruktionen säger själv att
+målvärdena är satta för predikningar i kyrksal och ska mätas på memon först.
+
+Pass 1 på 20 memon (de fyra i `incoming/` plus 16 slumpvalda):
+
+| | Röstmemon | Hestra-predikningar |
+| --- | --- | --- |
+| Loudness | median **−24,1 LUFS**, spann −27,4 … −21,6 | ~−35 LUFS, ner mot −40 |
+| Dynamiskt omfång | median **3,5 LU**, spann 2,1 … 8,1 | ~8 LU |
+| "Trasiga" | 0 av 20 | förekommer |
+
+Memona är redan jämna, starka och hårt komprimerade — sannolikt telefonens egen
+nivåreglering plus närmikrofon. Problemet normaliseringen löser i hestra, mycket
+tysta källor med varierande avstånd till mikrofonen, finns knappt här. Kvar blir
+~8 dB ren förstärkning, som Whispers log-mel-steg är i stort sett okänsligt för,
+och mer kompression på redan komprimerat ljud.
+
+**Normaliseringens effekt på transkriberingen är inte mätt någonstans** — inte
+heller i hestra, där den normaliserade filen också är en lyssningsprodukt. Här
+kastas den efter steg a, så dess *enda* syfte vore bättre transkribering. Samma
+läge som ordlisteprompten: bygg inte in den förrän den visat nytta.
+
+**Beslut 2026-09-17: normaliseringssteget byggs inte.** Flödesskissen behåller det
+som en plats, men kedjan går `incoming/` → `zego-prepare` → steg a tills något
+talar för motsatsen.
+
+Längdkravet håller: kedjan gav **+31 ms** på en fil om 33 min, lika i mp3 och i
+wav 16 kHz mono — avvikelsen kommer alltså från filterkedjan, inte från
+kodningen. Blir steget av är wav 16 kHz mono rätt tempformat: förlustfritt, och
+det Whisper ändå räknar om till.
 
 **Temagissning före flaggningen — prövad och underkänd.** Planen var att en fil i
 `incoming/` skulle få en preliminär temagissning som valde ordlista, eftersom
@@ -244,6 +287,27 @@ listan. Nästa kandidat, om scopningen visar sig sakna i praktiken, är en
 LLM-klassificering på råtranskriptet (~$0,01/fil) — den läser innehåll och inte
 bara namn. Bygg den inte utan att först se att hela listan faktiskt ger sämre
 flaggning på inkorgsfiler; Bolz-fallet är ett enda uppmätt exempel.
+
+**Första utfallet (2026-09-19): sju filer i `incoming/`, flaggade med hela
+listan.** Alla sju bär `tema: null` i sidecaren — rättelsen av `temamapp_for()`
+höll. Gissningarna hämtade termer ur **åtta olika listor**, även ur mappar memot
+knappast hör till: `Skimpar`→Wimber, `Wingard`→Vineyard, `Klod`→Claude,
+`Kentham`→Ken Ham, `ischgalopp`→Gish gallop. Med felet kvar (bara basen, 8 termer)
+hade ingen av dem stått i listan. Förenligt med att hela listan gör nytta, men
+inget bevis — Claude kan känna till namnen ändå.
+
+**Flaggtätheten fördubblades:** median **4,05 %** (2,05–8,33 %) mot **1,64 %** på
+67 sorterade medium-filer. Tre tänkbara orsaker, som den här datan inte kan skilja
+åt: small-modellen (fler verkliga fel), hela listan (mer brus), och innehållet
+(namntunga NAR-memon). De fem sorterade small-filerna som flaggats med scopad
+lista ligger på median 1,82 % — antyder att modellen ensam inte fördubblar, men
+n = 5 och spridningen är 1,5–4,4 %.
+
+**Måttet som avgör det finns redan:** av 716 granskade detektorflaggor i 47 filer
+var **87 % verkliga fel** (80 % replace, 7,5 % delete) och **12 % accept** —
+detektorn hade fel. Håller andelen accept sig kring 12 % när inkorgsfilerna
+granskas är de extra flaggorna verkliga fel, och texten har fler fel. Stiger den
+tydligt är de extra flaggorna brus. Räkna om när filerna granskats.
 
 ### a. Transkribering
 
@@ -311,6 +375,43 @@ den följer modellstorleken och stämmer med projektets egna mätningar.
 
 Sammantaget: **beslutet står på hastigheten, som är säker, och stöds av
 kvalitetssiffran, som är suggestiv.** Ingenting i mätningen talar för medium.
+
+**OBS — mätningen ovan underkändes i sitt eget projekt (2026-09-06, upptäckt här
+2026-09-16).** Hestra-projektet (`mediadev/predikningar-hestra-2017-2020/`) mätte
+om på en **hel** predikan, 25,4 min, ~3 200 ord, med large som facit:
+
+| Modell | Ord | Bortfall | Tillägg | Substitutioner | Fart |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| small | 3 092 | 184 | 64 | 83 | 2,09× |
+| medium | 2 860 | 399 | 47 | 128 | — |
+| large | 3 216 | — | — | — | 0,79× |
+
+Medium var sämst på båda axlarna, vilket stöder att vi lämnade medium. Men **small
+tappar också** — 184 bortfall i 25 minuter — och large hittar inte på: tio av
+larges bortfallsluckor kontrollyssnades, och alla tio fanns i ljudet. Utdraget om
+398 ord hade råkat innehålla mediums bästa ställen. Projektet bytte till **large**,
+med lärdomen *mät på hela inspelningar, inte utdrag* — samma förbehåll som stod
+här, fast nu belagt.
+
+Tre skäl att inte föra över siffrorna rakt av: predikningar i kyrksal är annat
+ljud än mobilmemon med närmikrofon (se loudness-mätningen under Helhetsflödet);
+hestra transkriberar **normaliserat** ljud; och hestra kör **`vad_filter=True`**,
+vilket vi inte gör. Bortfall är ändå den farligaste felklassen i det här
+projektet, eftersom ingen granskning kan höra det som aldrig transkriberades.
+
+**Läget 2026-09-16:** 201 transkript (43,7 h) är gjorda med small, och **ingen av
+dem är granskad, applicerad eller har `.md`.** Ett modellbyte kostar alltså bara
+CPU för dem — än så länge. Varje granskad small-fil gör bytet dyrare, eftersom en
+omtranskribering raderar granskningsbesluten. De 82 medium-filerna (18,8 h) bär
+däremot 59 granskningar och 55 `.md`.
+
+**Beslut 2026-09-17: frågan läggs åt sidan. `small` förblir standardmodell, och
+arbetet går vidare med de transkript som finns.** Underlaget ovan är inte
+motbevisat, bara inte prövat på memon — den mätning som skulle avgöra saken (large
+och small på fyra hela memon, ~2 h CPU) är inte gjord. Öppna inte frågan igen utan
+att Lars tar upp den. Värt att veta för den som ändå gör det: kostnaden för ett
+byte stiger med varje small-fil som granskas, eftersom en omtranskribering raderar
+besluten.
 
 **Ordlisteprompt — kända ord matas in i förväg.** Whisper får aldrig memots eget
 nyckelord rätt av sig själv: *ungjordskreationism* förvanskades fyra gånger i samma
