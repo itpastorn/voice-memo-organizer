@@ -53,7 +53,7 @@ Batch finns för **alla** körbara steg: a, b, apply och c. `data.test_file` byt
 för hand men läses numera bara av steg a — allt efter granskningen följer GUI:ts
 filval (`aktuell.py` visar vilken det är).
 
-**Namnvakten spärrar sju filer** (`namnvakt.py`) — se File Naming Convention.
+**Namnvakten spärrar sex filer** (`namnvakt.py`) — se File Naming Convention.
 Ett av fallen dolde 47 minuter ljud som aldrig kunnat transkriberas.
 
 **Arkivet är till största delen transkriberat (2026-09-16).** 286 transkript, varav
@@ -161,8 +161,8 @@ föräldralösa (det `synka-namn.py` finns för att laga).
 
 **Två fel hittade 2026-09-16, provade på testfiler. De bor i adminscripts:**
 
-- **Namnkrock raderade en inspelning — åtgärdat 2026-09-17** (adminscripts, grenen
-  `zego-prepare-namnkrock`). Steg 1 och 3 gjorde `mv` utan att kontrollera om
+- **Namnkrock raderade en inspelning — åtgärdat 2026-09-17**, sammanslaget i
+  adminscripts `main` 2026-09-19. Steg 1 och 3 gjorde `mv` utan att kontrollera om
   målet fanns. Prov: fem testfiler in, tre ut, exit 0 och "Klar." —
   `generation.m4a` skrev över en *annan* `zego-generation.m4a`, och
   `Lars Gunther predikan.m4a` skrev över en *annan* `predikan.m4a`. Det var det
@@ -933,7 +933,8 @@ sidecar.
 hash), och ingen av dem har transkript. Vakten jämför stammar över hela arkivet
 oavsett mapp, så en fil som laddas upp i inkorgen men redan finns sorterad fångas
 innan den kostar CPU. Det är precis den dubbelregistrering ett flöde med en
-inkorg bjuder in till.
+inkorg bjuder in till. **Löst 2026-09-19:** Lars raderade kopian i `incoming/`;
+den i `bibelsyn-lib-fund-equmeniakyrkan/` står kvar. Namnvakten är tillbaka på sex.
 
 Vakten skiljer därför på tre utfall: **spärrat** (avbryter, exit-kod 2),
 **varning** (körs vidare — t.ex. ett avvikande ljudfilnamn, eller ett transkript
