@@ -1221,5 +1221,8 @@ inte står här.
 | 7 | Konsistensvakt: samma namn förvanskat olika, bara ett flaggat | halv — `propagera-namn.py` klar, klustringsvakten kvar |
 | 8 | Väggklockemätningen räknar in sömn; hastigheten oförutsägbar | mätproblem |
 | 9 | Modernt vänteläge stryper nattbatch | **blockerar arkivet** |
-| 10 | Ordlistan per temamapp | ✅ genomförd — men issuen står **fortfarande öppen** på GitHub |
 | 11 | Språkdetektering avstängd av config; engelska memon översätts tyst | öppen — fångas idag bara av mänsklig märkning |
+| 12 | Rensa specialtoken ur transkripten | 107 träffar; 7 filer kräver omindexerade sidecars |
+
+Stängda: **#10** ordlistan per temamapp (genomförd; steg a:s bruk av den är
+avstängt, steg b:s scopning är kvar).
