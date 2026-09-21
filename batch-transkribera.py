@@ -182,37 +182,42 @@ def main() -> int:
     total_wall = 0.0
     done_count = 0
     token_tot = 0
-    for i, audio in enumerate(targets, 1):
-        if json_path_for(audio).exists():
-            logger.info("[%d/%d] hoppar över (json finns): %s", i, len(targets), audio.name)
-            continue
-        # Namnvakten före arbetet: en kollision skulle låta den här körningen
-        # skriva över ett transkript som redan finns. Hoppa över, avbryt inte
-        # batchen — de övriga filerna är oskyldiga.
-        try:
-            for v in k.vakta_ljud(cfg, audio):
-                logger.warning("[%d/%d] VARNING: %s", i, len(targets), v)
-        except k.NamnFel as e:
-            logger.error("[%d/%d] SPÄRRAD %s: %s", i, len(targets), audio.name, e)
-            if e.atgard:
-                logger.error("       %s", e.atgard)
-            continue
+    # Issue #9: modernt vänteläge stryper jobbet i stället för att stoppa det,
+    # så en nattkörning kryper i timmar utan att något syns i loggen. Begäran
+    # hålls bara runt själva körningen — modellinläsningen ovan tar sekunder,
+    # och --dry-run har redan returnerat.
+    with k.vaken(logger, skal="batchtranskriberingen"):
+        for i, audio in enumerate(targets, 1):
+            if json_path_for(audio).exists():
+                logger.info("[%d/%d] hoppar över (json finns): %s", i, len(targets), audio.name)
+                continue
+            # Namnvakten före arbetet: en kollision skulle låta den här körningen
+            # skriva över ett transkript som redan finns. Hoppa över, avbryt inte
+            # batchen — de övriga filerna är oskyldiga.
+            try:
+                for v in k.vakta_ljud(cfg, audio):
+                    logger.warning("[%d/%d] VARNING: %s", i, len(targets), v)
+            except k.NamnFel as e:
+                logger.error("[%d/%d] SPÄRRAD %s: %s", i, len(targets), audio.name, e)
+                if e.atgard:
+                    logger.error("       %s", e.atgard)
+                continue
 
-        logger.info("[%d/%d] transkriberar: %s", i, len(targets), audio.name)
-        try:
-            dur, wall, nseg, tokentraffar = transcribe_one(model, cfg, meta, audio, logger)
-        except Exception as e:
-            logger.error("[%d/%d] MISSLYCKADES %s: %s", i, len(targets), audio.name, e)
-            continue
-        total_wall += wall
-        done_count += 1
-        token_tot += tokentraffar
-        logger.info("[%d/%d] klar: %.1f min ljud, %.1f min väggtid (%.2fx realtid), %d segment -> %s",
-                    i, len(targets), dur / 60, wall / 60, (wall / dur if dur else 0), nseg,
-                    json_path_for(audio).name)
-        if tokentraffar:
-            logger.warning("[%d/%d] VARNING: %d specialtoken i texten — de blir ord i "
-                           "JSON:en. Kör tokenvakt.py.", i, len(targets), tokentraffar)
+            logger.info("[%d/%d] transkriberar: %s", i, len(targets), audio.name)
+            try:
+                dur, wall, nseg, tokentraffar = transcribe_one(model, cfg, meta, audio, logger)
+            except Exception as e:
+                logger.error("[%d/%d] MISSLYCKADES %s: %s", i, len(targets), audio.name, e)
+                continue
+            total_wall += wall
+            done_count += 1
+            token_tot += tokentraffar
+            logger.info("[%d/%d] klar: %.1f min ljud, %.1f min väggtid (%.2fx realtid), %d segment -> %s",
+                        i, len(targets), dur / 60, wall / 60, (wall / dur if dur else 0), nseg,
+                        json_path_for(audio).name)
+            if tokentraffar:
+                logger.warning("[%d/%d] VARNING: %d specialtoken i texten — de blir ord i "
+                               "JSON:en. Kör tokenvakt.py.", i, len(targets), tokentraffar)
 
     logger.info("=== Batch klar: %d transkriberade, total väggtid %.1f min ===",
                 done_count, total_wall / 60)

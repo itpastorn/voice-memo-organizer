@@ -10,9 +10,11 @@ Se CLAUDE.md.
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import json
 import re
+import sys
 import tomllib
 import unicodedata
 from pathlib import Path
@@ -472,6 +474,70 @@ def vakta_eller_avsluta(cfg: dict, json_path: Path) -> None:
         if e.atgard:
             print(f"     {e.atgard}", file=sys.stderr)
         raise SystemExit(2)
+
+
+# --------------------------------------------------------------------------- #
+# Vaken dator under långa körningar (issue #9)
+#
+# Modernt vänteläge (S0) stoppar inte bakgrundsjobb, det stryper dem. En
+# nattkörning dör alltså inte — den kryper, utan felutskrift, och loggen ser
+# ut som om allt går. Uppmätt natten till 2026-07-31: vänteläge 18 minuter
+# efter start, åtta timmar innan maskinen kom ur det, och en transkribering på
+# ~12 minuter var inte klar på 8,5 timmar.
+#
+# Begäran hör hemma i koden och inte i ett energischema någon ska minnas att
+# ändra — samma skäl som Portabilitet i CLAUDE.md anger för device och
+# compute_type. Skärmen lämnas i fred (inget ES_DISPLAY_REQUIRED): jobbet
+# behöver processorn vaken, inte panelen tänd.
+# --------------------------------------------------------------------------- #
+
+ES_CONTINUOUS = 0x80000000        # gäller tills den uttryckligen släpps
+ES_SYSTEM_REQUIRED = 0x00000001   # systemet får inte somna av tomgång
+
+
+@contextlib.contextmanager
+def vaken(logger=None, *, skal: str = "lång körning"):
+    """Håll systemet vaket så länge blocket körs. Släpper alltid efteråt.
+
+    No-op på allt utom Windows, och på Windows om anropet inte går igenom.
+    Att avbryta för att en energibegäran nekades vore fel avvägning: jobbet är
+    fortfarande värt att köra, det riskerar bara att strypas. Därför en
+    varning och inget mer — men *aldrig* tystnad, för strypningen syns inte.
+    """
+    def saga(niva: str, msg: str) -> None:
+        if logger is not None:
+            getattr(logger, niva)(msg)
+        else:
+            print(msg, file=sys.stderr if niva != "info" else sys.stdout)
+
+    kernel32 = None
+    if sys.platform != "win32":
+        saga("info", f"Vänteläge: ingen begäran ({sys.platform} — bara Windows "
+                     f"har SetThreadExecutionState).")
+    else:
+        try:
+            import ctypes
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.SetThreadExecutionState.restype = ctypes.c_uint32
+            kernel32.SetThreadExecutionState.argtypes = [ctypes.c_uint32]
+            if kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED):
+                saga("info", f"Vänteläge blockerat under {skal} "
+                             f"(ES_SYSTEM_REQUIRED). Kontrollera med "
+                             f"'powercfg /requests' i ett administratörsfönster.")
+            else:
+                kernel32 = None
+                saga("warning", "VARNING: energibegäran nekades. Datorn kan gå i "
+                                "vänteläge och strypa körningen utan att säga till.")
+        except Exception as e:                      # OSError, AttributeError, ...
+            kernel32 = None
+            saga("warning", f"VARNING: kunde inte begära vaken dator ({e}). "
+                            f"Körningen kan strypas av vänteläget.")
+    try:
+        yield kernel32 is not None
+    finally:
+        if kernel32 is not None:
+            kernel32.SetThreadExecutionState(ES_CONTINUOUS)
+            saga("info", "Vänteläge släppt — datorn får somna igen.")
 
 
 # --------------------------------------------------------------------------- #

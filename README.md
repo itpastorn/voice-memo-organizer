@@ -89,9 +89,14 @@ harmapp               # kör allt i mappen (idempotent — hoppar över klara)
 files=("$PWD"/*.m4a); batch "${files[@]:0:3}"   # bara de tre första
 ```
 
-Räkna med **0,8–1,5× realtid**; 39 filer ≈ 9 timmar. **Datorn somnar och stryper
-jobbet** efter ~20 minuter utan tillsyn (issue #9) — starta långa körningar från
-PowerShell med vaken-låsning, eller stanna vid datorn.
+Räkna med **0,8–1,5× realtid**; 39 filer ≈ 9 timmar. Batchen håller datorn vaken
+under körningen (`ES_SYSTEM_REQUIRED`), så modernt vänteläge inte stryper jobbet
+— det var issue #9, och det syntes inte som ett fel utan som en körning som kröp
+i åtta timmar. Begäran släpps alltid efteråt, också om körningen avbryts.
+
+**Kontrollera ändå kvoten efter en lång körning.** Ligger vägg/ljud i tiotal i
+stället för 0,5–2× har maskinen gått i vänteläge trots begäran; säg till då, för
+det betyder att en `SYSTEM`-begäran inte räcker på den här hårdvaran.
 
 ### 2. Flagga felhörningar (steg b) — ~$0,25/fil
 
@@ -239,7 +244,8 @@ fler verkliga fel eller mer brus avgörs först när de granskats.
 
 | # | Vad | Följd |
 | --- | --- | --- |
-| [#9](../../issues/9) | Modernt vänteläge stryper nattbatch | **blockerar arkivgenomkörningen** |
+| [#9](../../issues/9) | Modernt vänteläge stryper nattbatch | kod på plats; väntar på bevis i skarp drift |
+| [#12](../../issues/12) | Specialtoken kvar i 27 transkript | `tokenvakt` rapporterar, rensaren är inte byggd |
 | [#8](../../issues/8) | Hastigheten spänner 0,56×–1,99× oförklarat | går inte att planera på |
 | [#11](../../issues/11) | Språkdetektering avstängd av config | engelska memon översätts tyst |
 | [#7](../../issues/7) | Samma namn förvanskat olika — bara ett flaggas | detektorn ser ord, inte dokument |

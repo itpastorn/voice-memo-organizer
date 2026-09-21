@@ -971,13 +971,34 @@ minuter (uppmätt på medium; small är snabbare men inte snabb).
 - Steg a är det dyra. Steg b–e är billiga och kan köras när som helst
   (steg b ≈ $0,30/fil, steg c ≈ $0,20 — försumbart bredvid steg a:s CPU-tid).
 
-**Nattkörning fungerar inte som det är nu (issue #9).** Windows *modernt
-vänteläge* slog till 18 minuter efter start under en nattkörning och släppte
-först åtta timmar senare. Jobbet dog inte — det ströps, vilket är värre: ingen
-felutskrift, bara en körning som kröp. `batch-transkribera.py` behöver hålla
-`ES_SYSTEM_REQUIRED` under körningen (`SetThreadExecutionState`). Maskinberoende
-inställningar hör hemma i koden, inte i ett energischema någon ska minnas att
-ändra. Detta blockerar i praktiken genomkörningen av arkivet.
+**Nattkörning ströps av vänteläget (issue #9) — åtgärdat i koden 2026-09-22.**
+Windows *modernt vänteläge* slog till 18 minuter efter start under en nattkörning
+och släppte först åtta timmar senare. Jobbet dog inte — det ströps, vilket är
+värre: ingen felutskrift, bara en körning som kröp.
+
+`batch-transkribera.py` håller nu `ES_SYSTEM_REQUIRED` runt hela körningen via
+`korrigeringar.vaken()`, en kontexthanterare som alltid släpper — också när
+körningen avbryts av ett undantag. Maskinberoende inställningar hör hemma i
+koden, inte i ett energischema någon ska minnas att ändra; på arbetsstationen
+gäller samma sak, och på annat än Windows är den en no-op som säger ifrån.
+Skärmen lämnas i fred (inget `ES_DISPLAY_REQUIRED`) — jobbet behöver processorn
+vaken, inte panelen tänd.
+
+**Verifierat så långt det går utan en natt:** OS:et rapporterar tillbaka
+`0x80000001` (`ES_SYSTEM_REQUIRED | ES_CONTINUOUS`) under blocket och
+`0x80000000` efter, och `--dry-run` tar ingen begäran alls. `powercfg /requests`,
+som issuen föreslog, kräver administratörsfönster och gick därför inte att
+använda som bevis — avläsningen av trådens tillstånd kommer från samma API och
+duger.
+
+**Det som återstår är empiriskt och kan bara mätas i skarp drift:** att en
+`SYSTEM`-begäran verkligen hindrar *den här* maskinen från att gå i modernt
+vänteläge. S0 skiljer sig från gammaldags S3, och strypningen kommer från
+Desktop Activity Moderator efter att maskinen gått in i standby. Kontrollera
+efter nästa långa körning att kvoten vägg/ljud ligger i det vanliga spannet
+(0,5–2×) och inte i tiotal — en strypt körning syns direkt där. Håller det inte
+är nästa steg en riktig `PowerCreateRequest`/`PowerSetRequest` med
+`PowerRequestSystemRequired`, eller att låta körningen hålla skärmen tänd.
 
 ## Hårdvara
 
@@ -1220,7 +1241,7 @@ inte står här.
 | 5 | Revision-diff (standard vs strict) som extra flaggkälla | idé, väntar |
 | 7 | Konsistensvakt: samma namn förvanskat olika, bara ett flaggat | halv — `propagera-namn.py` klar, klustringsvakten kvar |
 | 8 | Väggklockemätningen räknar in sömn; hastigheten oförutsägbar | mätproblem |
-| 9 | Modernt vänteläge stryper nattbatch | **blockerar arkivet** |
+| 9 | Modernt vänteläge stryper nattbatch | kod på plats 2026-09-22; väntar på bevis i skarp drift |
 | 11 | Språkdetektering avstängd av config; engelska memon översätts tyst | öppen — fångas idag bara av mänsklig märkning |
 | 12 | Rensa specialtoken ur transkripten | 107 träffar; 7 filer kräver omindexerade sidecars |
 
