@@ -160,8 +160,16 @@ andra grenars kodord i förbigående — memot som gav upphov till hela den här
 funktionen säger "finns det något i wimber-vineyard så ska den till den mappen".
 
 **Skriptet flyttar aldrig något självt.** Det föreslår; Lars godkänner en fil i
-taget med `--flytta <stam>`. Reglerna bor i `sortering.toml` och är gjorda för
-att ändras — `sortera.py --mat` mäter om mot hela arkivet efter varje ändring.
+taget med `--flytta`. Reglerna bor i `sortering.toml` och är gjorda för att
+ändras — `sortera.py --mat` mäter om mot hela arkivet efter varje ändring.
+
+**Godkännandet är en siffra.** Listningen numrerar både memona och mapparna, så
+`--flytta 3` följer förslag 3 och `--flytta 3 --till 5` väljer mapp 5. Stam och
+mappnamn fungerar oförändrat och är det som står kvar i loggen. Numren är
+*positioner* och flyttar sig när en fil lämnar inkorgen — därför skrivs namnet
+numret löstes upp till alltid ut i samma utskrift som flytten, och rapporten
+påminner om att lista om före nästa flytt. Ett felval ska synas när det görs,
+inte upptäckas i efterhand.
 
 **Uppmätt (286 sorterade transkript).** Förslag ges för 89 % av filerna, och
 55 % av dem är rätt. Spridningen är poängen:

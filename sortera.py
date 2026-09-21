@@ -1,10 +1,15 @@
 """Föreslå vilken temamapp ett memo hör hemma i. Flyttar bara på godkännande.
 
-    sortera.py                    förslag för allt i incoming/
+    sortera.py                    numrerade förslag för allt i incoming/
     sortera.py --alla             visa även poängen bakom varje förslag
     sortera.py --mat              mät reglerna mot hela det sorterade arkivet
-    sortera.py --flytta <stam>    genomför förslaget för EN fil
-    sortera.py --flytta <stam> --till <mapp>    ... eller till en mapp du väljer
+    sortera.py --flytta 3         genomför förslag 3
+    sortera.py --flytta 3 --till 5    ... eller till mapp 5 i listan
+    sortera.py --flytta <stam> --till <mapp>    namn duger lika bra som nummer
+
+Numren är positioner i listningen, inte identitet: de flyttar sig så fort en
+fil lämnar inkorgen. Därför skrivs alltid namnet ut som numret löstes upp till,
+i samma utskrift som flytten.
 
 Reglerna bor i `sortering.toml` och är gjorda för att ändras. Skriptet lär sig
 inget självt — det är avsiktligt: en regel du kan läsa och rätta är värd mer än
@@ -197,7 +202,50 @@ def mat(cfg: dict, regler: dict) -> int:
 
 # --------------------------------------------------------------------------- #
 # Flytt — bara på uttryckligt godkännande
+#
+# Numren är bekvämlighet, inte identitet. De är positioner i listningen och
+# flyttar sig så fort en fil lämnar inkorgen, så varje nummer skrivs alltid ut
+# tillsammans med namnet det löstes upp till. Ett fel val ska synas i samma
+# utskrift som flytten, inte upptäckas efteråt.
 # --------------------------------------------------------------------------- #
+
+def inkorgsfiler(cfg: dict) -> list[Path]:
+    """Transkripten i inkorgen, i den ordning numreringen räknar dem.
+
+    Sorterad på filnamn, så samma körning två gånger ger samma nummer."""
+    root = Path(cfg["data"]["root"])
+    inkorg = root / cfg["data"].get("incoming", "incoming")
+    return sorted(p for p in inkorg.glob("*.json") if k.ar_transkript(p.name))
+
+
+def sla_upp_fil(cfg: dict, vad: str) -> str | None:
+    """Nummer ur listningen eller filstam — samma flagga tar båda."""
+    if not vad.isdigit():
+        return vad
+    filer = inkorgsfiler(cfg)
+    n = int(vad)
+    if not 1 <= n <= len(filer):
+        print(f"FEL: {n} finns inte i listan — den går från 1 till {len(filer)}. "
+              f"Kör sortera.py utan argument för att se den.", file=sys.stderr)
+        return None
+    stam = filer[n - 1].stem
+    print(f"{n} = {stam}")
+    return stam
+
+
+def sla_upp_mapp(regler: dict, vad: str) -> str | None:
+    """Nummer ur mapplistan eller mappnamn — samma flagga tar båda."""
+    if not vad.isdigit():
+        return vad
+    mappar = alla_mappar(regler)
+    n = int(vad)
+    if not 1 <= n <= len(mappar):
+        print(f"FEL: mapp {n} finns inte — listan går från 1 till {len(mappar)}.",
+              file=sys.stderr)
+        return None
+    print(f"--till {n} = {mappar[n - 1]}")
+    return mappar[n - 1]
+
 
 def flytta(cfg: dict, regler: dict, stam: str, till: str | None) -> int:
     root = Path(cfg["data"]["root"])
@@ -244,6 +292,7 @@ def flytta(cfg: dict, regler: dict, stam: str, till: str | None) -> int:
         print(f"  {q.name}  ->  {mal_namn}/")
     print(f"Klart: {len(familj)} filer flyttade.")
     print("Arbetskopian i granska/state/ är platt och behöver inte flyttas.")
+    print("Numren i listan har ändrats — kör sortera.py igen före nästa flytt.")
     print("Kör namnvakt.py om du vill kontrollera att inget kolliderar.")
     return 0
 
@@ -258,37 +307,67 @@ def main() -> int:
 
     if "--flytta" in args:
         i = args.index("--flytta")
-        if i + 1 >= len(args):
-            print("FEL: --flytta kräver en filstam.", file=sys.stderr)
+        if i + 1 >= len(args) or args[i + 1].startswith("--"):
+            print("FEL: --flytta kräver ett nummer ur listan eller en filstam.",
+                  file=sys.stderr)
             return 2
-        till = args[args.index("--till") + 1] if "--till" in args else None
-        return flytta(cfg, regler, args[i + 1], till)
+        # --till avgörs först: annars hinner filnumret skrivas ut innan ett
+        # trasigt mappval avbryter, och utskriften ser ut som en halv flytt.
+        till = None
+        if "--till" in args:
+            j = args.index("--till")
+            if j + 1 >= len(args) or args[j + 1].startswith("--"):
+                print("FEL: --till kräver ett mappnummer eller ett mappnamn.",
+                      file=sys.stderr)
+                return 2
+            till = sla_upp_mapp(regler, args[j + 1])
+            if till is None:
+                return 2
+        stam = sla_upp_fil(cfg, args[i + 1])
+        if stam is None:
+            return 2
+        return flytta(cfg, regler, stam, till)
 
     visa_alla = "--alla" in args
-    root = Path(cfg["data"]["root"])
-    inkorg = root / cfg["data"].get("incoming", "incoming")
-    filer = sorted(p for p in inkorg.glob("*.json") if k.ar_transkript(p.name))
+    filer = inkorgsfiler(cfg)
     if not filer:
+        inkorg = Path(cfg["data"]["root"]) / cfg["data"].get("incoming", "incoming")
         print(f"Inga transkript i {inkorg}.")
         return 0
 
-    print(f"Förslag för {len(filer)} memo i {inkorg.name}/")
+    print(f"Förslag för {len(filer)} memo i "
+          f"{cfg['data'].get('incoming', 'incoming')}/")
     print("Skriptet flyttar ingenting av sig självt.")
     print()
-    for p in filer:
+    utan_forslag = []
+    for n, p in enumerate(filer, 1):
         f = foresla(regler, p)
         mark = {"uttalat": "*", "tydligt": "•", "svagt": "?", "inget": "—"}[f.sakerhet]
-        print(f"  {mark} {p.stem}")
-        print(f"      {f.mapp or 'INGET FÖRSLAG':44s} {f.varfor}")
+        print(f"  {n:2d}. {mark} {p.stem}")
+        print(f"         {f.mapp or 'INGET FÖRSLAG':44s} {f.varfor}")
         if visa_alla and f.poang:
-            rad = "  ".join(f"{g}:{n}" for g, n in f.poang.items() if n)
-            print(f"      poäng: {rad or '(inga träffar)'}")
+            rad = "  ".join(f"{g}:{v}" for g, v in f.poang.items() if v)
+            print(f"         poäng: {rad or '(inga träffar)'}")
+        if f.mapp is None:
+            utan_forslag.append(n)
     print()
     print("* du sa det själv   • tydligt   ? svagt, kontrollera   — inget förslag")
     print()
-    print("Godkänn en i taget:")
-    print("    sortera.py --flytta <stam>              följ förslaget")
-    print("    sortera.py --flytta <stam> --till <mapp>  välj själv")
+    print("Godkänn en i taget — numret räcker:")
+    print("    sortera.py --flytta 3              följ förslag 3")
+    print("    sortera.py --flytta 3 --till 5     välj mapp själv")
+    print("    (filstam och mappnamn fungerar lika bra som numren)")
+    if utan_forslag:
+        print(f"    {', '.join(str(n) for n in utan_forslag)} saknar förslag "
+              f"och kräver --till.")
+    print()
+    print("Mapparna, i sortering.toml:s ordning:")
+    mappar = alla_mappar(regler)
+    for n, mapp in enumerate(mappar, 1):
+        print(f"  {n:2d}. {mapp}")
+    print()
+    print("Numren är positioner i den här listan och ändras när en fil flyttas.")
+    print("Kör sortera.py igen efter varje flytt.")
     return 0
 
 

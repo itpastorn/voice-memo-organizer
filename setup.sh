@@ -73,8 +73,8 @@ Kommandon (alla tar samma flaggor som skripten):
   namnvakt [--alla]       filnamn som kolliderar och spärrar pipelinen
   tokenvakt [--alla]      Whisper-specialtoken som läckt in i transkripten
   trvakt [--alla]         transkriptioner som inte duger (upprepningsloopar)
-  sortera                 föreslå temamapp för memon i incoming/
-  sortera --flytta STAM   godkänn förslaget och flytta (--till MAPP: välj själv)
+  sortera                 numrerade förslag på temamapp för memon i incoming/
+  sortera --flytta N      godkänn förslag N (--till M: välj mapp själv)
   synka [--kor]           härledda filer följer med när ljudet döpts om
   propagera [--dry-run]   sprid fattade rättelser till orättade förekomster
   applicera [--dry-run]   skriv in besluten i alla färdiggranskade filer

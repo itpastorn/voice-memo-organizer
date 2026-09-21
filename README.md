@@ -174,11 +174,21 @@ i config.toml. `aktuell.py` visar valet i förväg.
 ### 6. Sortera ut ur incoming/
 
 ```bash
-sortera                       # förslag för allt i incoming/
-sortera --alla                # plus poängen bakom varje förslag
-sortera --flytta zego-x       # godkänn förslaget för en fil
-sortera --flytta zego-x --till NAR-profetrorelsen    # välj mapp själv
+sortera                  # numrerade förslag för allt i incoming/
+sortera --alla           # plus poängen bakom varje förslag
+sortera --flytta 3       # godkänn förslag 3
+sortera --flytta 3 --till 5     # ... eller välj mapp 5 själv
 ```
+
+Listningen numrerar både memona och mapparna, så ett godkännande är en siffra.
+Filstam och mappnamn fungerar lika bra — `--flytta zego-x --till trump-politik`
+betyder samma sak, och är det som står kvar i loggen efteråt.
+
+**Numren är positioner, inte identitet.** De flyttar sig så fort en fil lämnar
+inkorgen, så kör `sortera` igen mellan varje flytt. Skriptet skriver alltid ut
+vilket namn numret löstes upp till (`3 = zego-gransdragning-foljdfragor`) i
+samma utskrift som flytten, så ett felval syns direkt i stället för att
+upptäckas senare.
 
 **Skriptet flyttar aldrig något av sig självt.** Det föreslår, du godkänner en
 fil i taget. Flytten tar hela den härledda familjen och pekarfälten — samma
@@ -204,7 +214,7 @@ tillförlitlig över tid; reglerna behöver inte vara perfekta från början.
 | se vilka filnamn som spärrar pipelinen | `namnvakt` (`--alla` listar även de ofarliga avvikelserna) |
 | kontrollera om Whisper-token läckt in i texten | `tokenvakt` (`--alla` visar varje träff med tidsstämpel) |
 | hitta transkriptioner som inte duger alls | `trvakt` — upprepningsloopar och filer med för få ord |
-| få ett memo ur `incoming/` till rätt temamapp | `sortera` föreslår, `sortera --flytta STAM` genomför |
+| få ett memo ur `incoming/` till rätt temamapp | `sortera` föreslår numrerat, `sortera --flytta N` genomför |
 | jag har döpt om eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |
