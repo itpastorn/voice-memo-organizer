@@ -95,7 +95,7 @@ def main() -> int:
                   f"{m['unika_segment']:.0%} unika segment  |  "
                   f"täckning {m['tackning']:.0%}  |  {r['modell']}")
         for prob in r["problem"]:
-            print(f"      → {prob}")
+            print(f"      - {prob}")
         print()
 
     if visa_alla:

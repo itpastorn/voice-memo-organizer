@@ -277,14 +277,14 @@ def main() -> int:
     print()
     for p in filer:
         f = foresla(regler, p)
-        mark = {"uttalat": "★", "tydligt": "•", "svagt": "?", "inget": "—"}[f.sakerhet]
+        mark = {"uttalat": "*", "tydligt": "•", "svagt": "?", "inget": "—"}[f.sakerhet]
         print(f"  {mark} {p.stem}")
         print(f"      {f.mapp or 'INGET FÖRSLAG':44s} {f.varfor}")
         if visa_alla and f.poang:
             rad = "  ".join(f"{g}:{n}" for g, n in f.poang.items() if n)
             print(f"      poäng: {rad or '(inga träffar)'}")
     print()
-    print("★ du sa det själv   • tydligt   ? svagt, kontrollera   — inget förslag")
+    print("* du sa det själv   • tydligt   ? svagt, kontrollera   — inget förslag")
     print()
     print("Godkänn en i taget:")
     print("    sortera.py --flytta <stam>              följ förslaget")
