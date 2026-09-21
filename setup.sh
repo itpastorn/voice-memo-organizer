@@ -6,7 +6,8 @@
 #
 #     source setup.sh          (eller: . setup.sh)
 #
-# Ger: harmapp, batch, flagga, granska, aktuell, namnvakt, tokenvakt, synka,
+# Ger: harmapp, batch, flagga, granska, aktuell, namnvakt, tokenvakt, trvakt,
+# synka,
 # propagera,
 # applicera, forbattra, vmo. Kör `vmohjalp` för listan.
 
@@ -37,6 +38,7 @@ else
     aktuell()   { "$PY" "$VMO/aktuell.py"            "$@"; }   # vilken fil är vald?
     namnvakt()  { "$PY" "$VMO/namnvakt.py"           "$@"; }   # kolliderande filnamn
     tokenvakt() { "$PY" "$VMO/tokenvakt.py"          "$@"; }   # specialtoken i texten
+    trvakt()    { "$PY" "$VMO/transkriptionsvakt.py" "$@"; }   # duger transkriptionen?
     synka()     { "$PY" "$VMO/synka-namn.py"         "$@"; }   # laga efter omdöpt ljud
     vmo()       { cd "$VMO" || return; }
     granska()   { ( cd "$VMO/granska" && docker compose up ); }  # GUI på :8137
@@ -70,6 +72,7 @@ Kommandon (alla tar samma flaggor som skripten):
   aktuell                 vilken fil är vald i GUI:t? (skriver inget)
   namnvakt [--alla]       filnamn som kolliderar och spärrar pipelinen
   tokenvakt [--alla]      Whisper-specialtoken som läckt in i transkripten
+  trvakt [--alla]         transkriptioner som inte duger (upprepningsloopar)
   synka [--kor]           härledda filer följer med när ljudet döpts om
   propagera [--dry-run]   sprid fattade rättelser till orättade förekomster
   applicera [--dry-run]   skriv in besluten i alla färdiggranskade filer

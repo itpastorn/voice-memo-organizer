@@ -449,6 +449,46 @@ misslyckad transkription**: en kort fil får hög andel av en enda träff
 `zego-pingstkarismatiska-…` med 92 % — var däremot redan märkt "ny transkription
 behövs" för hand, så vakten hade kunnat säga det automatiskt.
 
+**Transkriptionsvakt (`transkriptionsvakt.py` + `korrigeringar.transkriptionsmatt`).**
+Vakten bedömer **hela filen**, aldrig enskilda ord — det är detektorns jobb.
+Frågan här är den motsatta: är det här över huvud taget en transkription av det
+som sägs i ljudet?
+
+Whisper kan fastna i en upprepningsloop: *"Jag tackar för mig. Jag tackar för mig
+själv. Jag tackar för mig."* i elva minuter. Ingenting nedströms fångar det —
+texten är välformad svenska, så granskningen ser inget konstigt, och detektorn
+letar efter felhörda ord och inte efter att filen saknar innehåll.
+
+**Uppmätt 2026-09-21: 9 av 293 transkript är trasiga, 8 av dem omärkta.** Den
+enda som redan var märkt hittades för hand. Fallen hittades av en slump, när
+andelen specialtoken prövades som mått på en misslyckad transkription.
+
+Två mått, och de mäter olika saker:
+
+| Mått | Loopfilerna | Riktiga filer | Tröskel |
+| --- | --- | --- | --- |
+| andel unika segment | 0,11–0,50 | ≥ 0,92 (p5 = 0,98) | **0,80** |
+| ord per minut | 1,6–18,6 | nästa riktiga 39 (p5 = 77, median 96) | **30** |
+
+Båda trösklarna ligger i **breda tomrum** i mätningen, inte nära datan. Filer
+under en minut bedöms inte alls — där blir måtten brus, och en tvåsekunders
+minnesanteckning på två ord är inte trasig.
+
+**Whispers egna mått dög inte.** `compression_ratio` räknas per segment och ser
+därför inte en loop som går *över* segmentgränser: högsta värdet i hela arkivet
+är 2,23, under Whispers egen larmgräns 2,4. `no_speech_prob` är 0,00 i samtliga
+filer. Pröva dem inte igen.
+
+**Loopen är ett säkert omdöme; lågt ordtempo utan loop är det inte.**
+`zego-olika-slags-fel` ligger på 39 ord/minut med sammanhängande innehåll — en
+människa som tänker mellan meningarna. Därför flaggar vakten, men rättar och
+märker aldrig: det kräver en lyssning. Duger inspelningen inte märks den i GUI:t,
+och då hoppar `batch-flagga.py` över den i stället för att betala för att flagga
+nonsens.
+
+`transkribera.py` och `batch-transkribera.py` varnar direkt när en ny
+transkription faller under någon tröskel.
+
 **Ordlisteprompt — kända ord matas in i förväg.** Whisper får aldrig memots eget
 nyckelord rätt av sig själv: *ungjordskreationism* förvanskades fyra gånger i samma
 fil, aldrig likadant; *cessationist* fem gånger i en annan. Prompten byggs per fil av

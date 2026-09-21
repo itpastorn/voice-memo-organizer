@@ -252,6 +252,11 @@ def main() -> int:
         logger.warning("    De blir ord i JSON:en och följer med till .txt och .srt.")
         logger.warning("    Kör tokenvakt.py för hela bilden.")
 
+    # Duger transkriptionen över huvud taget? En upprepningsloop ger flytande
+    # nonsens som varken granskningen eller detektorn upptäcker.
+    for problem in k.transkriptionsproblem(k.transkriptionsmatt(output)):
+        logger.warning("VARNING: %s", problem)
+
     logger.info("Segment:      %d", len(segments))
     logger.info("Ljudlängd:    %.1f s (%.2f min)", audio_seconds, audio_seconds / 60)
     logger.info("Väggklocka:   %.1f s (%.2f min)", wall_seconds, wall_seconds / 60)

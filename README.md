@@ -21,7 +21,7 @@ vmohjalp                 # listar kommandona
 ```
 
 Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
-`tokenvakt`, `synka`, `propagera`, `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
+`tokenvakt`, `trvakt`, `synka`, `propagera`, `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
 fungerar när du vill åt något som inte har en genväg.
@@ -168,6 +168,7 @@ i config.toml. `aktuell.py` visar valet i förväg.
 | veta vilken fil som är vald | `aktuell` — fil, mapp, flaggor kvar, applicerad eller ej |
 | se vilka filnamn som spärrar pipelinen | `namnvakt` (`--alla` listar även de ofarliga avvikelserna) |
 | kontrollera om Whisper-token läckt in i texten | `tokenvakt` (`--alla` visar varje träff med tidsstämpel) |
+| hitta transkriptioner som inte duger alls | `trvakt` — upprepningsloopar och filer med för få ord |
 | jag har döpt om eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |

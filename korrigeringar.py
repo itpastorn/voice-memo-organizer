@@ -786,6 +786,77 @@ def specialtoken_traffar(segments: list[dict]) -> list[dict]:
 
 
 # --------------------------------------------------------------------------- #
+# Är transkriptionen användbar över huvud taget?
+#
+# Whisper kan fastna i en upprepningsloop och producera flytande nonsens:
+# 'Jag tackar för mig. Jag tackar för mig själv. Jag tackar för mig.' i elva
+# minuter. Det ser inte ut som ett fel — texten är välformad svenska — och
+# ingenting nedströms fångar det. Detektorn flaggar enskilda ord, inte att hela
+# filen saknar innehåll.
+#
+# Trösklarna är satta i tomrum i mätningen (2026-09-21, 282 filer över en minut),
+# inte nära datan:
+#
+#   andel unika segment   loopfilerna 0,11–0,50   riktiga filer >= 0,92   p5 = 0,98
+#   ord per minut         loopfilerna 1,6–18,6    nästa riktiga 39        p5 = 76,6
+#
+# Whispers egna mått dög inte. `compression_ratio` räknas per segment och ser
+# därför inte en loop som går ÖVER segmentgränser (max i arkivet: 2,23, under
+# Whispers egen larmgräns 2,4). `no_speech_prob` är 0,00 i hela arkivet.
+# --------------------------------------------------------------------------- #
+
+MIN_SEKUNDER = 60.0          # kortare filer ger för brusiga mått
+MIN_ORD_PER_MINUT = 30.0
+MIN_UNIKA_SEGMENT = 0.80
+MIN_TACKNING = 0.85
+
+
+def transkriptionsmatt(data: dict) -> dict | None:
+    """Mått på om en transkription är användbar, eller None när filen är för
+    kort för att bedöma.
+
+    `ord_per_minut` räknar bort specialtoken — annars får en fil som är full av
+    '<|nospeech|>' ett respektabelt ordtempo på ren skräp."""
+    dur = data.get("duration")
+    segment = data.get("segments") or []
+    if not dur or dur < MIN_SEKUNDER or not segment:
+        return None
+    ord_antal = sum(len(s.get("words") or []) for s in segment)
+    token = sum(len(t["ord"]) for t in specialtoken_traffar(segment))
+    texter = [(s.get("text") or "").strip() for s in segment]
+    return {
+        "ord_per_minut": (ord_antal - token) / (dur / 60),
+        "unika_segment": len(set(texter)) / len(texter),
+        "tackning": max((s.get("end") or 0) for s in segment) / dur,
+        "ord": ord_antal,
+        "minuter": dur / 60,
+    }
+
+
+def transkriptionsproblem(matt: dict | None) -> list[str]:
+    """Vad som är fel med transkriptionen, i klartext. Tom lista = inget fel.
+
+    Loopen först: den förklarar nästan alltid också varför ordtempot är lågt,
+    och den är det säkra omdömet. Lågt ordtempo utan loop kan vara en människa
+    som tänker länge mellan meningarna — det kräver en lyssning, inte ett
+    beslut i ett skript."""
+    if not matt:
+        return []
+    problem = []
+    if matt["unika_segment"] < MIN_UNIKA_SEGMENT:
+        problem.append(
+            f"upprepningsloop: bara {matt['unika_segment']:.0%} av segmenten är unika")
+    if matt["ord_per_minut"] < MIN_ORD_PER_MINUT:
+        problem.append(
+            f"ovanligt få ord: {matt['ord_per_minut']:.0f} ord/minut "
+            f"(arkivets median är 96)")
+    if matt["tackning"] < MIN_TACKNING:
+        problem.append(
+            f"avkortad: texten slutar {matt['tackning']:.0%} in i ljudet")
+    return problem
+
+
+# --------------------------------------------------------------------------- #
 # Kluster och kontextfönster
 # --------------------------------------------------------------------------- #
 

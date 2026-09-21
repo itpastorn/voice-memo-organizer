@@ -101,6 +101,13 @@ def transcribe_one(model, cfg: dict, meta: dict, audio: Path,
     (d / f"{stem}.json").write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
     k.write_srt(segments, d / f"{stem}.srt")
     k.write_txt(segments, d / f"{stem}.txt")
+    # Duger transkriptionen över huvud taget? En upprepningsloop ger flytande
+    # nonsens som varken granskningen eller detektorn upptäcker — se
+    # transkriptionsvakt.py.
+    if logger:
+        for problem in k.transkriptionsproblem(k.transkriptionsmatt(output)):
+            logger.warning("    VARNING: %s", problem)
+
     # Specialtoken som läckt ut som text blir ord i sanningskällan. Rapporteras
     # per fil av anroparen — se tokenvakt.py.
     return info.duration, wall, len(segments), len(k.specialtoken_traffar(segments))
