@@ -137,11 +137,72 @@ ligger i `incoming/` genom hela kedjan och flyttas en gång, när allt är klart
 | Var filerna ligger under bearbetning | kvar i `incoming/` tills sorteringen |
 | Sorteringen | **föreslår, Lars godkänner** |
 
-**Byggt:** `incoming/` som inkorg. **Väntar:** normaliseringen (källan finns,
-men nyttan är omätt — se nedan), sorteringsalgoritmen (bygger på QDA-koderna, som
-väntar på kodboken). Flytten själv finns redan — `synka-namn.py` tar hela den härledda
-familjen, arbetskopian i `granska/state/` och pekarfälten. Sorteringen blir
-"flytta ljudet + kör synka", med ett godkännandesteg framför.
+**Byggt:** `incoming/` som inkorg, och sorteringen (`sortera.py`, se nedan).
+**Väntar:** normaliseringen (källan finns, men nyttan är omätt — se nedan).
+
+### Sorteringen (`sortera.py` + `sortering.toml`)
+
+**Ett träd, inte en kedja.** Lars beskrev det själv i ett memo: grenarna följer
+hans huvudintressen, och det som kommer först får företräde när ett memo rör
+flera ämnen. Ordningen är 1 Meta, 2 Skumt och dumt (NAR / Kirk-TPUSA /
+trump-politik), 3 Israel, 4 Skapelse, 5 God karismatik (wimber / helande /
+god-karismatik), 6 Bibelsyn, 7a Egna texter, 7b Idéer.
+
+Meta ligger först av ett skäl som bara Lars kunde veta: ett metamemo nämner
+andra grenars kodord i förbigående — memot som gav upphov till hela den här
+funktionen säger "finns det något i wimber-vineyard så ska den till den mappen".
+
+**Skriptet flyttar aldrig något självt.** Det föreslår; Lars godkänner en fil i
+taget med `--flytta <stam>`. Reglerna bor i `sortering.toml` och är gjorda för
+att ändras — `sortera.py --mat` mäter om mot hela arkivet efter varje ändring.
+
+**Uppmätt (286 sorterade transkript).** Förslag ges för 89 % av filerna, och
+55 % av dem är rätt. Spridningen är poängen:
+
+| Mapp | Rätt av förslagen |
+| --- | ---: |
+| trump-politik, skapelse-evolution | 100 % |
+| NAR-profetrorelsen | 92 % |
+| helande-dunamis | 82 % |
+| israel-palestina | 75 % |
+| meta-admin | 67 % |
+| Kirk-TPUSA | 53 % |
+| bibelsyn | 22 % |
+| god-karismatik | 11 % |
+| andra-ideer | 8 % |
+
+**Vägen dit, så att ingen gör om försöken:**
+
+- *Första träffen vinner*, som memot beskrev det, gav **36 %**. Den som ligger
+  först stjäl: `god-karismatik` fick 0 av 30.
+- *Räkna träffar i stället* gav **55 %** på grennivå 64 %.
+- *Täthetskrav* ("nämns minst N gånger") gav ingen vinst alls — det flyttar bara
+  felet mellan grenarna. Vid krav på 8 omnämnanden går slasken från 35 % till
+  91 % medan gren 2 faller från 89 % till 36 %.
+- *Normalisering* för olika många nyckelord per mapp gav **43 %** — sämre.
+
+**Lövvalet inom en gren är en inställning, för grenarna är olika.** Prioritet
+(första lövet med träff) är rätt i gren 2: ett Kirk-memo kan handla mycket om
+Trump utan att vara ett Trump-memo, och det lyfte Kirk från 39 % till 53 %.
+Poäng är rätt i gren 5: `wimber` finns i 22 filer medan mappen har två, så
+prioritet lät det lövet äta grenen och `helande-dunamis` föll från 82 % till
+59 %. `lovval = "poang"` i TOML-filen styr det.
+
+**Det som inte går att lösa med nyckelord.** `god-karismatik` överlappar NAR
+oåterkalleligt — CLAUDE.md konstaterade redan att Bill Johnson hör hemma i båda.
+`andra-ideer` saknar eget ordförråd: publiceringsorden Lars föreslog (`substack`,
+`artikel`, `del två`) täcker 22 % av mappen med 24 % precision, och `del
+två/tre/fyra` förekommer aldrig — Whisper skriver siffror.
+
+**Det som ska göra sorteringen bra över tid är inte algoritmen utan vanan.**
+Säger Lars i memots första mening *"den här inspelningen handlar om NAR"* avgörs
+saken direkt, oavsett allt annat. `[uttalat]` i TOML-filen innehåller fraserna.
+Ingen fil i arkivet har det ännu; regeln finns på plats för att den ska kunna
+börja användas.
+
+Flytten tar hela familjen — ljud, transkript och allt härlett — i ett svep, och
+vägrar när ett målnamn redan finns. Arbetskopian i `granska/state/` är platt och
+behöver inte flyttas.
 
 **`zego-prepare`** är ett Git Bash-alias för
 `workspace/adminscripts/zego-prepare.sh` — ett annat repo, inte en del av det här
@@ -1129,11 +1190,8 @@ Skriptet självt, kodboken och databasen bor i detta projekt
 2. **Blockkoder i markdown.** Frontmatter räcker för dokumentnivå. Hur märks
    enskilda block? HTML-kommentarer, en parallell `.codes.json`, eller något
    annat?
-3. **Sortering — besvarad 2026-09-16.** Pipelinen föreslår temamapp, Lars
-   godkänner; sorteringen sker sist i kedjan. Kvar är *algoritmen*, som bygger
-   på QDA-koderna och därmed väntar på fråga 1. En billig förstagissning på
-   ordlisteträffar prövades för ett annat syfte och underkändes — se
-   Helhetsflödet; den duger inte heller som sorterare.
+3. **Sortering — besvarad, och byggd 2026-09-21.** `sortera.py` + `sortering.toml`
+   föreslår temamapp; Lars godkänner en fil i taget. Se Sorteringen nedan.
 4. **Resten av arkivet.** 80 ljudfiler / 17,8 h återstår (2026-09-16), ned från
    277 / 60,5 h före körningen 2026-09-05–06. Issue #9 (vänteläget) är inte
    åtgärdat i koden.

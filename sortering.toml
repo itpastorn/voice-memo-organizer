@@ -1,0 +1,113 @@
+# sortering.toml — trädet som sorteringsförslagen följer.
+#
+# Den här filen är gjord för att ÄNDRAS. Reglerna är inte utlärda ur datan utan
+# skrivna för hand; mätningen finns till för att säga hur de faktiskt träffar.
+# Lägg till ord när du ser ett förslag bli fel, och kör `sortera.py --mat` för
+# att se vad ändringen gjorde med hela arkivet.
+#
+# ORDNINGEN BETYDER NÅGOT. Grenarna prövas uppifrån och ner, och den gren vars
+# ord dominerar vinner. Ordningen speglar Lars huvudintressen: det som kommer
+# först får företräde när ett memo rör flera ämnen. Ett meta-memo nämner andra
+# grenars kodord i förbigående ("...så ska den till wimber-vineyard") och måste
+# därför ligga först.
+#
+# UPPMÄTT 2026-09-21 mot 286 sorterade transkript:
+#   gren 2 hittas till 90 %, och inom den blir lövet rätt i 79 % av fallen
+#   grennivån totalt 64 %; 7a saknar eget ordförråd och drar ner snittet
+# Förslagen är alltså till för att godkännas, aldrig för att lita blint på.
+
+# Ett memo som säger vad det handlar om avgör saken direkt, oavsett allt annat.
+# Det är den disciplin som ska göra sorteringen tillförlitlig över tid: säg
+# "Den här inspelningen handlar om NAR" i första meningen, så är det avgjort.
+[uttalat]
+inledning_sekunder = 45          # bara början av memot räknas
+fraser = [
+    "den här inspelningen handlar om",
+    "det här memot handlar om",
+    "den här inspelningen hör hemma i",
+    "denna inspelning handlar om",
+    "det här ska till",
+    "sortera det här under",
+]
+
+# --------------------------------------------------------------------------- #
+# Grenarna, i prioritetsordning
+# --------------------------------------------------------------------------- #
+
+[[gren]]
+namn = "1 Meta"
+mapp = "meta-admin-todo-fix"
+ord = ["kassetter", "kassettband", "notebooklm", "databas", "skript", "claude",
+       "transkription", "transkribering", "transkribera", "whisper", "python",
+       "pipeline", "röstmemo", "röstinspelning", "sortering", "mappstruktur"]
+
+[[gren]]
+namn = "2 Skumt och dumt"
+# Ingen egen mapp — grenen avgörs först, sedan lövet nedan.
+[[gren.lov]]
+mapp = "NAR-profetrorelsen"
+ord = ["nar", "profet", "profetia", "profetisk", "apostel", "apostolisk",
+       "bethel", "bill johnson", "dekret", "silk", "bolz", "vallotton",
+       "branham", "toronto", "bickle", "destiny image"]
+[[gren.lov]]
+mapp = "Kirk-TPUSA-kristen-nationalism"
+ord = ["kirk", "tpusa", "turning point", "kristen nationalism", "americafest",
+       "shapiro", "carlson", "posobiec", "minnesstund"]
+[[gren.lov]]
+mapp = "trump-politik"
+ord = ["trump", "maga", "hegseth", "venezuela", "maduro", "vita huset",
+       "republikan", "demokraterna"]
+
+[[gren]]
+namn = "3 Israel"
+mapp = "israel-palestina-antisemitism"
+ord = ["israel", "palestin", "antisemit", "sionism", "gaza", "netanyahu",
+       "judisk", "judarna"]
+
+[[gren]]
+namn = "4 Skapelse och vetenskap"
+mapp = "skapelse-evolution-vetenskap-apologetik"
+ord = ["evolution", "kreationism", "ungjordskreationism", "darwin", "ken ham",
+       "gish", "fossil", "naturvetenskap", "apologetik"]
+
+[[gren]]
+namn = "5 God karismatik"
+# Löven väljs på poäng, inte prioritet: 'wimber' finns i 22 filer i arkivet
+# medan wimber-vineyard har två. Med prioritet åt den grenen inifrån — uppmätt
+# föll helande-dunamis från 82 % till 59 %.
+lovval = "poang"
+[[gren.lov]]
+mapp = "wimber-vineyard"
+ord = ["wimber", "vineyard"]
+[[gren.lov]]
+mapp = "helande-dunamis"
+ord = ["helande", "helad", "bota", "botade", "sjukdom", "dunamis",
+       "helbrägda", "förbön"]
+[[gren.lov]]
+mapp = "god-karismatik-egna-boken"
+ord = ["howard carter", "horton", "cessationis", "tungotal", "andens gåvor",
+       "kunskapens ord", "karismatik", "nådegåv", "wigglesworth"]
+
+[[gren]]
+namn = "6 Bibelsyn"
+mapp = "bibelsyn-lib-fund-equmeniakyrkan"
+ord = ["liberalteolog", "fundamentalism", "bibelsyn", "equmenia",
+       "bibelns auktoritet", "inspirationslära", "skriftsyn", "verbalinspiration"]
+
+[[gren]]
+namn = "7a Egna texter och artiklar"
+mapp = "andra-ideer-teologi-substack-webb"
+# UPPMÄTT SVAG: orden täcker bara 22 % av mappens filer med 24 % precision.
+# 'del två/tre/fyra' förekommer aldrig — Whisper skriver siffror. Mappen får
+# därför sällan ett förslag, och det är bättre än ett falskt.
+ord = ["substack", "itpastorn", "min webbplats", "min hemsida", "artikeln",
+       "skriva om", "skriva en artikel", "publicera", "del 2", "del 3", "del 4",
+       "bloggen", "essä"]
+
+[[gren]]
+namn = "7b Idéer och predikoutkast"
+mapp = "ideer-predikoutkast-minnesanteckningar"
+# Sist med flit: hit hör det som inte hör någon annanstans. Mappen har inga
+# transkript ännu, så reglerna är oprövade.
+ord = ["predikoutkast", "predikan", "minnesanteckning", "idé till predikan",
+       "gudstjänst", "textutläggning"]

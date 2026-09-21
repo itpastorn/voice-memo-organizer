@@ -39,6 +39,7 @@ else
     namnvakt()  { "$PY" "$VMO/namnvakt.py"           "$@"; }   # kolliderande filnamn
     tokenvakt() { "$PY" "$VMO/tokenvakt.py"          "$@"; }   # specialtoken i texten
     trvakt()    { "$PY" "$VMO/transkriptionsvakt.py" "$@"; }   # duger transkriptionen?
+    sortera()   { "$PY" "$VMO/sortera.py"            "$@"; }   # förslag på temamapp
     synka()     { "$PY" "$VMO/synka-namn.py"         "$@"; }   # laga efter omdöpt ljud
     vmo()       { cd "$VMO" || return; }
     granska()   { ( cd "$VMO/granska" && docker compose up ); }  # GUI på :8137
@@ -73,6 +74,7 @@ Kommandon (alla tar samma flaggor som skripten):
   namnvakt [--alla]       filnamn som kolliderar och spärrar pipelinen
   tokenvakt [--alla]      Whisper-specialtoken som läckt in i transkripten
   trvakt [--alla]         transkriptioner som inte duger (upprepningsloopar)
+  sortera [--mat]         föreslå temamapp för memon i incoming/
   synka [--kor]           härledda filer följer med när ljudet döpts om
   propagera [--dry-run]   sprid fattade rättelser till orättade förekomster
   applicera [--dry-run]   skriv in besluten i alla färdiggranskade filer
