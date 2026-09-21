@@ -22,7 +22,7 @@ inte steg b–e i förväg. Låt inte "det behövs sedan" motivera kod som inte 
 **Utveckling sker i VSCode** med Claude-tillägget. Denna CLAUDE.md är den
 gemensamma kontexten mellan sessioner och verktyg.
 
-### Nuvarande status (2026-08-01)
+### Nuvarande status (2026-09-22)
 
 | Steg | Läge |
 | --- | --- |
@@ -30,9 +30,16 @@ gemensamma kontexten mellan sessioner och verktyg.
 | **b** flaggning (LLM) + granska-GUI + apply | ✅ |
 | — runda 2 (Fable) | ✅ byggd, **har inte behövts** sedan prompten utökades |
 | **c** språklig förbättring + negationsvakt | ✅ prototyp |
+| — tokenvakt + transkriptionsvakt | ✅ rapporterar, rättar aldrig |
+| — sortering ur `incoming/` | ✅ föreslår; flytt bara på godkännande |
 | **d** QDA-taggning | ⬜ kodboken obeslutad |
 | **e** SQLite-index | ⬜ |
 | **f** metadatataggar på ljudet | ⬜ planerad, ej byggd |
+
+**Arkivet, mätt 2026-09-22:** 364 ljudfiler, 293 transkript (208 `small`,
+82 `medium`, 3 utan modellfält), 57 applicerade, 58 `.md`. Kvar att
+transkribera: **69 filer, 15,9 timmar.** Sex filer spärrade av namnvakten,
+0 avvikande ljudfilnamn (versalerna försvann i omdöpningen 2026-08-28).
 
 **Sex filer har gått hela vägen a → c**, i fem olika ämnesområden: NAR/politik,
 skapelse/evolution, teologi (bokmaterial), AI/teknik, och en kort felfri fil.
@@ -56,9 +63,9 @@ filval (`aktuell.py` visar vilken det är).
 **Namnvakten spärrar sex filer** (`namnvakt.py`) — se File Naming Convention.
 Ett av fallen dolde 47 minuter ljud som aldrig kunnat transkriberas.
 
-**Arkivet är till största delen transkriberat (2026-09-16).** 286 transkript, varav
-201 med `small` (körda 2026-09-05–06) och 82 med `medium`. **Kvar: 80 ljudfiler,
-17,8 timmar** — mätt med `ffprobe`. Fyra av dem ligger i `incoming/`.
+**Arkivet är till största delen transkriberat.** Aktuella siffror står i
+Nuvarande status ovan; `small`-transkripten kördes 2026-09-05–06. Allt i
+`incoming/` är transkriberat — det som återstår ligger i temamapparna.
 
 **Helhetsflödet ändrades 2026-09-16** — nya inspelningar går via `incoming/` och
 sorteras sist. Se Pipeline.
@@ -809,6 +816,9 @@ filen bara basen; det är inget fel, bara en mapp som ännu inte körts skarpt.
 Delade byggstenar (config, ordlista, kontextfönster, ankare, blockformat) bor i
 `korrigeringar.py`. API-nyckeln läses ur gitignorerad `.env` (`ANTHROPIC_API_KEY`).
 
+Steget är beskrivet för utlåning i `docs/lana-steg-b.md` — format, indexinvariant
+och GUI-kontrakt, tillräckligt för att bygga om det i ett annat projekt.
+
 ### c. Språklig förbättring
 
 En LLM (Claude API, anropad direkt från skriptet) städar transkriptionen: tar bort
@@ -1191,10 +1201,10 @@ Skriptet självt, kodboken och databasen bor i detta projekt
    enskilda block? HTML-kommentarer, en parallell `.codes.json`, eller något
    annat?
 3. **Sortering — besvarad, och byggd 2026-09-21.** `sortera.py` + `sortering.toml`
-   föreslår temamapp; Lars godkänner en fil i taget. Se Sorteringen nedan.
-4. **Resten av arkivet.** 80 ljudfiler / 17,8 h återstår (2026-09-16), ned från
-   277 / 60,5 h före körningen 2026-09-05–06. Issue #9 (vänteläget) är inte
-   åtgärdat i koden.
+   föreslår temamapp; Lars godkänner en fil i taget. Se Sorteringen under Pipeline.
+4. **Resten av arkivet.** 69 ljudfiler / 15,9 h återstår (2026-09-22), ned från
+   277 / 60,5 h före körningen 2026-09-05–06. Inget av det ligger i `incoming/`.
+   Issue #9 (vänteläget) är inte åtgärdat i koden.
 5. **Hur hjälper man Whisper med ovanliga ord?** Ordlisteprompt via hotwords är
    prövad och underkänd (se steg a). Kvar att pröva: `kb-whisper-large` på
    arbetsstationen, revision-diff som flaggkälla (issue #5), eller att helt
@@ -1211,4 +1221,5 @@ inte står här.
 | 7 | Konsistensvakt: samma namn förvanskat olika, bara ett flaggat | halv — `propagera-namn.py` klar, klustringsvakten kvar |
 | 8 | Väggklockemätningen räknar in sömn; hastigheten oförutsägbar | mätproblem |
 | 9 | Modernt vänteläge stryper nattbatch | **blockerar arkivet** |
-| 10 | Ordlistan per temamapp | ✅ genomförd i denna omgång |
+| 10 | Ordlistan per temamapp | ✅ genomförd — men issuen står **fortfarande öppen** på GitHub |
+| 11 | Språkdetektering avstängd av config; engelska memon översätts tyst | öppen — fångas idag bara av mänsklig märkning |

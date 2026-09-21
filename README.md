@@ -21,7 +21,8 @@ vmohjalp                 # listar kommandona
 ```
 
 Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
-`tokenvakt`, `trvakt`, `synka`, `propagera`, `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
+`tokenvakt`, `trvakt`, `sortera`, `synka`, `propagera`, `applicera`, `forbattra`
+och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
 fungerar när du vill åt något som inte har en genväg.
@@ -37,11 +38,13 @@ namnvakt --alla          # plus varje avvikande ljudfilnamn
 ```
 
 Skripten kör vakten själva och stoppar den enskilda filen; det här är
-översikten. Den spärrar **kollisioner**, inte konventionsbrott: 113 av 363
-ljudfiler har versaler och det är ofarligt — utdata normaliseras ändå. Men när
-två ljudfiler får samma normaliserade stam skriver de samma `.json`, och den ena
-inspelningen kommer aldrig in i pipelinen. Sex filer är spärrade idag; en av dem
-dolde 47 minuter ljud som aldrig kunnat transkriberas
+översikten. Den spärrar **kollisioner**, inte konventionsbrott — när vakten
+byggdes hade 113 av 363 ljudfiler versaler, och alla 113 var ofarliga eftersom
+utdata normaliseras ändå. (Efter omdöpningen 2026-08-28 är de borta: 364
+ljudfiler, 0 avvikande namn.) Men när två ljudfiler får samma normaliserade stam
+skriver de samma `.json`, och den ena inspelningen kommer aldrig in i pipelinen.
+Sex filer är spärrade idag; en av dem dolde 47 minuter ljud som aldrig kunnat
+transkriberas
 (`zego-torpseminarium.aac`). Åtgärden är alltid att döpa om ljudet så att
 stammarna blir unika i hela arkivet — `granska/state/` är platt, så det räcker
 inte att de skiljer sig inom mappen.
@@ -163,12 +166,40 @@ Steg 4 och 5 arbetar alla på **den fil du valt i GUI:t** (`granska/current.json
 och skriver ut vilken det blev. Har du inte valt någon används `data.test_file`
 i config.toml. `aktuell.py` visar valet i förväg.
 
+### 6. Sortera ut ur incoming/
+
+```bash
+sortera                       # förslag för allt i incoming/
+sortera --alla                # plus poängen bakom varje förslag
+sortera --flytta zego-x       # godkänn förslaget för en fil
+sortera --flytta zego-x --till NAR-profetrorelsen    # välj mapp själv
+```
+
+**Skriptet flyttar aldrig något av sig självt.** Det föreslår, du godkänner en
+fil i taget. Flytten tar hela den härledda familjen och pekarfälten — samma
+maskineri som `synka`.
+
+Reglerna står i **[sortering.toml](sortering.toml)** och är gjorda för att
+ändras: ett prioritetsordnat träd av nyckelord, inte en modell. Ser du ett
+förslag bli fel, lägg till ett ord och kör `sortera --mat` för att se vad
+ändringen gjorde med hela arkivet.
+
+Uppmätt mot de sorterade transkripten: förslag ges för **89 %** av filerna och
+**55 % av förslagen är rätt**. Spridningen per mapp är poängen — NAR 92 %,
+helande-dunamis 82 %, Kirk 53 %, men god-karismatik 11 % och andra-ideer 8 %.
+Läs alltså förslaget, godkänn det inte blint.
+
+Säg **"den här inspelningen handlar om ..."** i memots första halvminut, så
+avgörs saken direkt oavsett nyckelord. Det är disciplinen som gör sorteringen
+tillförlitlig över tid; reglerna behöver inte vara perfekta från början.
+
 | Vill du... | Gör så |
 | --- | --- |
 | veta vilken fil som är vald | `aktuell` — fil, mapp, flaggor kvar, applicerad eller ej |
 | se vilka filnamn som spärrar pipelinen | `namnvakt` (`--alla` listar även de ofarliga avvikelserna) |
 | kontrollera om Whisper-token läckt in i texten | `tokenvakt` (`--alla` visar varje träff med tidsstämpel) |
 | hitta transkriptioner som inte duger alls | `trvakt` — upprepningsloopar och filer med för få ord |
+| få ett memo ur `incoming/` till rätt temamapp | `sortera` föreslår, `sortera --flytta STAM` genomför |
 | jag har döpt om eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |
@@ -190,13 +221,19 @@ i config.toml. `aktuell.py` visar valet i förväg.
 | — | Runda 2 (frivillig): kontextgranskning med Claude Fable | ✅ sällan behövd |
 | **c** | Språklig förbättring → `.md` + `-borttaget.txt` | ✅ prototyp |
 | — | Negationsvakt: deterministisk kontroll av steg c-utdatan | ✅ |
+| — | Tokenvakt + transkriptionsvakt: duger texten alls? | ✅ rapporterar, rättar inte |
+| — | Sortering: förslag på temamapp, flytt på godkännande | ✅ |
 | **d** | QDA-taggning (kodbok, blocknivå) | ⬜ kodboken obeslutad |
 | **e** | SQLite-index (FTS5) för sökning | ⬜ |
 | **f** | Metadatataggar på ljudfilerna (efter a, c och d) | ⬜ |
 
-Sex filer har gått hela vägen a → c i fem ämnesområden. **Flaggfrekvensen ligger på
-1,3–2 % av orden oberoende av ämne** — det är en egenskap hos ljudet och modellen,
-inte hos domänen, och detektorn klarade tre domäner där ordlistan var tom.
+Läget (mätt 2026-09-22): **364 ljudfiler, 293 transkript** — 208 med `small`, 82
+med `medium`. 57 är applicerade och 58 har `.md`. Kvar att transkribera: **69
+filer, 15,9 timmar**. **Flaggfrekvensen ligger på 1,3–2 % av orden oberoende av
+ämne** i de sorterade mapparna — det är en egenskap hos ljudet och modellen, inte
+hos domänen, och detektorn klarade tre domäner där ordlistan var tom. Filer i
+`incoming/`, som flaggas mot hela ordlistan, ligger dubbelt så högt; om det är
+fler verkliga fel eller mer brus avgörs först när de granskats.
 
 ### Kända hinder
 
@@ -214,13 +251,16 @@ det förväntade — small ligger **närmare** `large` än vad `medium` gör (93
 80,1 % överensstämmelse på samma utdrag) och är dessutom dubbelt så snabb. Hela
 underlaget med förbehåll står i [CLAUDE.md](CLAUDE.md), steg a.
 
-| Modell | Överensstämmelse med large | Kvot vägg/ljud | De 60,5 h som återstår |
+| Modell | Överensstämmelse med large | Kvot vägg/ljud | De 60,5 h som återstod då |
 | --- | --- | --- | --- |
 | **small** | **93,6 %** | ~0,49× | ~30 h |
 | medium | 80,1 % | ~0,85× | ~52 h |
 | large | (facit) | ~1,67× | ~101 h |
 
-Dessförinnan `medium` — de 85 befintliga transkripten är gjorda med den, och det
+Sedan dess har arkivet körts: **15,9 timmar återstår** (69 filer, mätt
+2026-09-22), alltså ungefär åtta CPU-timmar med `small`.
+
+Dessförinnan `medium` — 82 av transkripten är gjorda med den, och det
 är inget problem: JSON:en bär `model`, så varje fil är självförklarande.
 Transkribera **inte** om dem för att byta modell; sidecarens ordindex refererar
 den gamla texten, och granskningsbesluten skulle gå förlorade.
@@ -288,8 +328,8 @@ laptop/arbetsstation.
 **Hastigheten går inte att planera på.** Uppmätt på **medium**, samma maskin och
 inställningar: 0,56× (referensen), 0,76–0,82×, 0,99×, 1,25–1,31×, och 1,52–1,99×
 med ordlisteprompt. Spannet är 3,5× och orsaken är okänd — se issue #8. Räkna
-inte på bästafallet: skillnaden mellan 0,8× och 1,5× är ~100 timmar CPU på de
-60,5 timmar ljud som återstår (277 av 363 filer, uppmätt 2026-09-04). Siffrorna
+inte på bästafallet: skillnaden mellan 0,8× och 1,5× var ~100 timmar CPU när 60,5
+timmar ljud återstod (uppmätt 2026-09-04; idag återstår 15,9 h). Siffrorna
 är inte omprövade sedan bytet till `small`, som bör ligga lägre — men spannets
 storlek lär bestå.
 
@@ -350,6 +390,10 @@ Skriver `<namn>-corrections.txt` bredvid JSON:en. Varje flaggat ord får sitt
 **ankare** (ordets starttid, `@37.86`) och LLM:ns gissning som `#`-kommentar.
 Delade byggstenar (config, ankare, kontextfönster, blockformat, `.srt`/`.txt`-
 skrivare) bor i [korrigeringar.py](korrigeringar.py).
+
+Ska steget återanvändas i ett annat projekt finns hela specifikationen — format,
+index-invariant, GUI-kontrakt — i
+**[docs/lana-steg-b.md](docs/lana-steg-b.md)**.
 
 ## Granska-GUI (webb, i Docker)
 

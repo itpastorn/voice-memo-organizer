@@ -7,9 +7,8 @@
 #     source setup.sh          (eller: . setup.sh)
 #
 # Ger: harmapp, batch, flagga, granska, aktuell, namnvakt, tokenvakt, trvakt,
-# synka,
-# propagera,
-# applicera, forbattra, vmo. Kör `vmohjalp` för listan.
+# sortera, synka, propagera, applicera, forbattra, vmo.
+# Kör `vmohjalp` för listan med förklaringar.
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     echo "setup.sh måste sourcas, annars försvinner allt när skriptet slutar:" >&2
@@ -74,14 +73,17 @@ Kommandon (alla tar samma flaggor som skripten):
   namnvakt [--alla]       filnamn som kolliderar och spärrar pipelinen
   tokenvakt [--alla]      Whisper-specialtoken som läckt in i transkripten
   trvakt [--alla]         transkriptioner som inte duger (upprepningsloopar)
-  sortera [--mat]         föreslå temamapp för memon i incoming/
+  sortera                 föreslå temamapp för memon i incoming/
+  sortera --flytta STAM   godkänn förslaget och flytta (--till MAPP: välj själv)
   synka [--kor]           härledda filer följer med när ljudet döpts om
   propagera [--dry-run]   sprid fattade rättelser till orättade förekomster
   applicera [--dry-run]   skriv in besluten i alla färdiggranskade filer
   forbattra [--dry-run]   steg c -> .md, med negationsvakt efter varje fil
   vmo                     gå till projektmappen
 
-Ordningen: harmapp -> flagga -> granska -> propagera -> granska -> applicera -> forbattra
+Ordningen: harmapp -> flagga -> granska -> propagera -> granska -> applicera
+           -> forbattra -> sortera
+Nya memon ligger i incoming/ hela vägen och flyttas till temamapp sist.
 Se README.md i projektet för kostnader och fallgropar.
 HJALP
     }
