@@ -21,7 +21,7 @@ vmohjalp                 # listar kommandona
 ```
 
 Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
-`synka`, `propagera`, `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
+`tokenvakt`, `synka`, `propagera`, `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
 fungerar när du vill åt något som inte har en genväg.
@@ -40,7 +40,7 @@ Skripten kör vakten själva och stoppar den enskilda filen; det här är
 översikten. Den spärrar **kollisioner**, inte konventionsbrott: 113 av 363
 ljudfiler har versaler och det är ofarligt — utdata normaliseras ändå. Men när
 två ljudfiler får samma normaliserade stam skriver de samma `.json`, och den ena
-inspelningen kommer aldrig in i pipelinen. Sju filer är spärrade idag; en av dem
+inspelningen kommer aldrig in i pipelinen. Sex filer är spärrade idag; en av dem
 dolde 47 minuter ljud som aldrig kunnat transkriberas
 (`zego-torpseminarium.aac`). Åtgärden är alltid att döpa om ljudet så att
 stammarna blir unika i hela arkivet — `granska/state/` är platt, så det räcker
@@ -167,6 +167,7 @@ i config.toml. `aktuell.py` visar valet i förväg.
 | --- | --- |
 | veta vilken fil som är vald | `aktuell` — fil, mapp, flaggor kvar, applicerad eller ej |
 | se vilka filnamn som spärrar pipelinen | `namnvakt` (`--alla` listar även de ofarliga avvikelserna) |
+| kontrollera om Whisper-token läckt in i texten | `tokenvakt` (`--alla` visar varje träff med tidsstämpel) |
 | jag har döpt om eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |

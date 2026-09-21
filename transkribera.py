@@ -242,6 +242,16 @@ def main() -> int:
     k.write_srt(segments, srt_path)
     k.write_txt(segments, txt_path)
 
+    # Modellens styrtoken kan läcka ut som vanlig text ('<|nospeech|>') och blir
+    # då ord i sanningskällan, med egna global_index. Varna direkt — efter att en
+    # sidecar hunnit skapas kostar en rensning att alla index skrivs om.
+    tokentraffar = k.specialtoken_traffar(segments)
+    if tokentraffar:
+        logger.warning("VARNING: %d specialtoken i texten (t.ex. %s).",
+                       len(tokentraffar), tokentraffar[0]["token"])
+        logger.warning("    De blir ord i JSON:en och följer med till .txt och .srt.")
+        logger.warning("    Kör tokenvakt.py för hela bilden.")
+
     logger.info("Segment:      %d", len(segments))
     logger.info("Ljudlängd:    %.1f s (%.2f min)", audio_seconds, audio_seconds / 60)
     logger.info("Väggklocka:   %.1f s (%.2f min)", wall_seconds, wall_seconds / 60)

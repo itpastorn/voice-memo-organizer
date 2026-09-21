@@ -55,8 +55,9 @@ def discover(root: Path, n: int) -> list[Path]:
 
 
 def transcribe_one(model, cfg: dict, meta: dict, audio: Path,
-                   logger=None) -> tuple[float, float, int]:
-    """Transkribera EN fil, skriv json/srt/txt. Returnerar (ljudlängd, väggtid, segment).
+                   logger=None) -> tuple[float, float, int, int]:
+    """Transkribera EN fil, skriv json/srt/txt.
+    Returnerar (ljudlängd, väggtid, segment, specialtoken i texten).
 
     Ordlisteprompten härleds per fil ur ljudets temamapp — det är den enda
     inställning som skiljer filerna åt i en batch."""
@@ -100,7 +101,9 @@ def transcribe_one(model, cfg: dict, meta: dict, audio: Path,
     (d / f"{stem}.json").write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
     k.write_srt(segments, d / f"{stem}.srt")
     k.write_txt(segments, d / f"{stem}.txt")
-    return info.duration, wall, len(segments)
+    # Specialtoken som läckt ut som text blir ord i sanningskällan. Rapporteras
+    # per fil av anroparen — se tokenvakt.py.
+    return info.duration, wall, len(segments), len(k.specialtoken_traffar(segments))
 
 
 def main() -> int:
@@ -171,6 +174,7 @@ def main() -> int:
 
     total_wall = 0.0
     done_count = 0
+    token_tot = 0
     for i, audio in enumerate(targets, 1):
         if json_path_for(audio).exists():
             logger.info("[%d/%d] hoppar över (json finns): %s", i, len(targets), audio.name)
@@ -189,18 +193,25 @@ def main() -> int:
 
         logger.info("[%d/%d] transkriberar: %s", i, len(targets), audio.name)
         try:
-            dur, wall, nseg = transcribe_one(model, cfg, meta, audio, logger)
+            dur, wall, nseg, tokentraffar = transcribe_one(model, cfg, meta, audio, logger)
         except Exception as e:
             logger.error("[%d/%d] MISSLYCKADES %s: %s", i, len(targets), audio.name, e)
             continue
         total_wall += wall
         done_count += 1
+        token_tot += tokentraffar
         logger.info("[%d/%d] klar: %.1f min ljud, %.1f min väggtid (%.2fx realtid), %d segment -> %s",
                     i, len(targets), dur / 60, wall / 60, (wall / dur if dur else 0), nseg,
                     json_path_for(audio).name)
+        if tokentraffar:
+            logger.warning("[%d/%d] VARNING: %d specialtoken i texten — de blir ord i "
+                           "JSON:en. Kör tokenvakt.py.", i, len(targets), tokentraffar)
 
     logger.info("=== Batch klar: %d transkriberade, total väggtid %.1f min ===",
                 done_count, total_wall / 60)
+    if token_tot:
+        logger.warning("%d specialtoken hamnade i texten under körningen. Kör "
+                       "tokenvakt.py för att se vilka filer.", token_tot)
     return 0
 
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import functools
 import json
+import re
 import tomllib
 import unicodedata
 from pathlib import Path
@@ -721,6 +722,67 @@ def flatten_words(segments: list[dict]) -> list[dict]:
                 "probability": w.get("probability"),
             })
     return words
+
+
+# --------------------------------------------------------------------------- #
+# Whisper-specialtoken i texten
+#
+# Modellens styrtoken kan läcka ut som vanlig text: '<|nospeech|>' står kvar i
+# segmentet och hamnar i .json, .txt och .srt. Uppmätt 2026-09-21: 27 av 293
+# transkript, 107 segment, båda modellerna.
+#
+# Den går INTE att hitta med en sökning i enskilda ord. Whisper delar den över
+# flera ordtokens — '<', '|nospeech', '|', '>' — så varje ord för sig ser
+# oskyldigt ut. Därför sätts orden ihop per segment innan mönstret söks, och
+# träffen mappas tillbaka till de ordindex den täcker.
+#
+# Bara token som omöjligt kan vara vanliga ord listas. 'translate' och
+# 'transcribe' är också styrtoken men förekommer i engelsk text, och en vakt som
+# larmar på riktiga ord blir avstängd.
+# --------------------------------------------------------------------------- #
+
+SPECIALTOKEN_RE = re.compile(
+    r"<\s*\|\s*(nospeech|startoftranscript|startoflm|startofprev|endoftext|notimestamps)"
+    r"\s*\|\s*>", re.IGNORECASE)
+
+
+def specialtoken_traffar(segments: list[dict]) -> list[dict]:
+    """Specialtoken i texten, en post per träff.
+
+    Varje post bär segmentets index, de GLOBALA ordindex träffen täcker (samma
+    numrering som flatten_words), själva tokensträngen, starttiden och om
+    tokenen utgör hela segmentet.
+
+    `helt_segment` avgör hur farlig träffen är att laga: är segmentet bara token
+    kan det tas bort rakt av, men sitter tokenen mitt i tal sitter den ihop med
+    riktiga ord ('<|nospeech|>ologi,') och en mekanisk strykning skulle ta text
+    med sig.
+    """
+    traffar: list[dict] = []
+    gi = 0
+    for si, seg in enumerate(segments):
+        ord_ = seg.get("words") or []
+        text = ""
+        spann: list[tuple[int, int]] = []
+        for w in ord_:
+            o = w.get("word", "")
+            spann.append((len(text), len(text) + len(o)))
+            text += o
+        # Segment utan ordlista: sök i segmentets egen text, men då finns inga
+        # ordindex att peka ut.
+        sok = text if ord_ else (seg.get("text") or "")
+        for m in SPECIALTOKEN_RE.finditer(sok):
+            idx = [gi + j for j, (a, b) in enumerate(spann)
+                   if a < m.end() and b > m.start()]
+            traffar.append({
+                "segment": si,
+                "ord": idx,
+                "token": m.group(0),
+                "start": seg.get("start"),
+                "helt_segment": bool(ord_) and len(idx) == len(ord_),
+            })
+        gi += len(ord_)
+    return traffar
 
 
 # --------------------------------------------------------------------------- #

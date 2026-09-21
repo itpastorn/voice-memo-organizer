@@ -327,6 +327,8 @@ int8 på CPU.
 - Producerar tre filer per ljudklipp: `.json` (fullt Whisper-utdata med
   ord-nivå-tidsstämplar), `.srt`, `.txt`.
 - JSON:en är sanningskällan. Allt nedströms härleds ur den.
+- **Specialtoken kan läcka ut som text** — se tokenvakten nedan. `transkribera.py`
+  och `batch-transkribera.py` varnar direkt när det sker.
 - Metadatataggarna (steg **f**) sätts **efter steg c**, inte direkt efter
   transkriberingen — se Helhetsflödet. Album-taggen väntar dessutom på sorteringen.
 
@@ -412,6 +414,40 @@ och small på fyra hela memon, ~2 h CPU) är inte gjord. Öppna inte frågan ige
 att Lars tar upp den. Värt att veta för den som ändå gör det: kostnaden för ett
 byte stiger med varje small-fil som granskas, eftersom en omtranskribering raderar
 besluten.
+
+**Tokenvakt (`tokenvakt.py` + `korrigeringar.specialtoken_traffar`).** Modellens
+styrtoken kan hamna i texten som om den vore tal. Uppmätt 2026-09-21: **107
+träffar i 27 av 293 transkript**, i båda modellerna, och de följer med ut i 32
+`.txt` och 26 `.srt`. Hittat av en slump när ett granskat memo slutade på
+`<|nospeech|>`.
+
+**Den går inte att hitta med en sökning i orden.** Whisper delar tokenen över
+flera ordtokens — `<`, `|nospeech`, `|`, `>` — så varje ord för sig ser oskyldigt
+ut, och ett mönster som `<\|[^|]*\|>` mot enskilda ord ger **noll träffar** i hela
+arkivet. Därför sätter vakten ihop orden per segment, söker mönstret i den
+sammanslagna strängen och mappar tillbaka till de ordindex träffen täcker.
+
+Två saker gör en rensning svårare än den ser ut:
+
+- **13 av 107 träffar sitter mitt i tal**, ihopklistrade med riktiga ord
+  (`<|nospeech|>ologi,`, `h<|nospeech|>`). En mekanisk strykning tar text med sig.
+  Resten utgör hela sitt segment och går att ta bort rakt av.
+- **7 filer bär granskningsbeslut, apply eller `.md`.** Tokenorden ingår i
+  `global_index`, så en rensning förskjuter varje index efter träffen och
+  förstör besluten. De kräver att sidecarens index skrivs om i samma svep.
+
+Vakten **rensar därför inte** — den rapporterar, och avslutar med kod 1 när något
+hittas. Rensningen är ett eget steg som inte är byggt.
+
+Skadan är mindre än den ser ut: **noll flaggor** har slösats på tokenen, och
+**ingen `.md`** bär den — steg c städar bort den. Kvar är skräp i sanningskällan
+och i `.txt`/`.srt`.
+
+`andel` i rapporten (tokenord av alla ord) **duger inte ensam som mått på en
+misslyckad transkription**: en kort fil får hög andel av en enda träff
+(`zego-bill-j-son-i-vita-huset`, 12 %, är fullt normal). Den värsta filen —
+`zego-pingstkarismatiska-…` med 92 % — var däremot redan märkt "ny transkription
+behövs" för hand, så vakten hade kunnat säga det automatiskt.
 
 **Ordlisteprompt — kända ord matas in i förväg.** Whisper får aldrig memots eget
 nyckelord rätt av sig själv: *ungjordskreationism* förvanskades fyra gånger i samma
