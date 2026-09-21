@@ -4,16 +4,31 @@
 # (Clode, NoteGellum). Observerade förvanskningar inom parentes.
 
 # Personer
-Rikard Roitto           # (Richard Reuter) — nytestamentlig forskare, AI literacy
+Steve Jobs
 
 # Produkter och tjänster
+Anthropic
+Open AI
 Claude                  # (Clode)
 NotebookLM              # (NoteGellum)
+Gemini
 ChatGPT
 YouTube
 Facebook
 CoWork
 RAG
+Trello
+Todoist
+Google Calendar
+Router
+Internet of Things
+Z-Wave
+Dropbox
+Onedrive
+Onenote
+Teams
+Zotero
+Thunderbird
 
 # Begrepp
 AI literacy
@@ -22,6 +37,10 @@ AI-modell
 early adopters
 influencers
 ordbehandlare           # (Nordbehandlade)
+IMAP
+Webbserver
+Programmering
+Webbutveckling
 
 # Armand Duplantis: förekom i ett AI-genererat falskt inlägg om honom och Trump
 # som spreds bland Lars pastorskollegor — exempel på AI-slop, inte om friidrott.
@@ -32,3 +51,4 @@ Usenet
 Fidonet
 Eternal September
 Netscape Navigator
+Mozilla
