@@ -43,7 +43,7 @@ byggdes hade 113 av 363 ljudfiler versaler, och alla 113 var ofarliga eftersom
 utdata normaliseras ändå. Men när två ljudfiler får samma normaliserade stam
 skriver de samma `.json`, och den ena inspelningen kommer aldrig in i pipelinen.
 
-**Just nu spärras ingenting** (mätt 2026-10-01: 366 ljudfiler, 0 kollisioner,
+**Just nu spärras ingenting** (mätt 2026-10-02: 366 ljudfiler, 0 kollisioner,
 0 avvikande namn). Alla sex fallen är avgjorda — ett av dem dolde 47 minuter
 ljud som aldrig kunnat transkriberas. Dyker ett nytt upp är åtgärden alltid att
 döpa om ljudet så att stammarna blir unika i **hela** arkivet; `granska/state/`

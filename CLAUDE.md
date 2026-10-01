@@ -1110,8 +1110,8 @@ Det farliga är i stället när normaliseringen får två filer att falla ihop:
 | samma stam i två temamappar | `granska/state/` är platt — sidecars skriver över varandra, och besluten landar i fel fil |
 | transkript vars egen stam inte är normaliserad | `json_path_for()` kan aldrig härleda fram till det; härledda namn blandas med grannens |
 
-**Alla kollisioner är avgjorda — vakten spärrade noll vid mätningen
-2026-10-01.**
+**Alla kollisioner är avgjorda — vakten spärrar noll (mätt 2026-10-02:
+366 ljudfiler, 308 transkript, 0 spärrade, 0 avvikande namn).**
 Historiken nedan står kvar, för den är skälet till att vakten finns: varje fall
 var ett tyst fel som ingenting annat i kedjan hade sagt ifrån om. Utfallen:
 
