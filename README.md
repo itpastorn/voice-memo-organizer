@@ -40,14 +40,14 @@ namnvakt --alla          # plus varje avvikande ljudfilnamn
 Skripten kör vakten själva och stoppar den enskilda filen; det här är
 översikten. Den spärrar **kollisioner**, inte konventionsbrott — när vakten
 byggdes hade 113 av 363 ljudfiler versaler, och alla 113 var ofarliga eftersom
-utdata normaliseras ändå. (Efter omdöpningen 2026-08-28 är de borta: 364
-ljudfiler, 0 avvikande namn.) Men när två ljudfiler får samma normaliserade stam
+utdata normaliseras ändå. Men när två ljudfiler får samma normaliserade stam
 skriver de samma `.json`, och den ena inspelningen kommer aldrig in i pipelinen.
-Sex filer är spärrade idag; en av dem dolde 47 minuter ljud som aldrig kunnat
-transkriberas
-(`zego-torpseminarium.aac`). Åtgärden är alltid att döpa om ljudet så att
-stammarna blir unika i hela arkivet — `granska/state/` är platt, så det räcker
-inte att de skiljer sig inom mappen.
+
+**Just nu spärras ingenting** (mätt 2026-10-01: 366 ljudfiler, 0 kollisioner,
+0 avvikande namn). Alla sex fallen är avgjorda — ett av dem dolde 47 minuter
+ljud som aldrig kunnat transkriberas. Dyker ett nytt upp är åtgärden alltid att
+döpa om ljudet så att stammarna blir unika i **hela** arkivet; `granska/state/`
+är platt, så det räcker inte att de skiljer sig inom mappen.
 
 ### 0b. Har du döpt om ljudfiler?
 
@@ -242,9 +242,15 @@ tillförlitlig över tid; reglerna behöver inte vara perfekta från början.
 | **e** | SQLite-index (FTS5) för sökning | ⬜ |
 | **f** | Metadatataggar på ljudfilerna (efter a, c och d) | ⬜ |
 
-Läget (mätt 2026-09-22): **364 ljudfiler, 293 transkript** — 208 med `small`, 82
-med `medium`. 57 är applicerade och 58 har `.md`. Kvar att transkribera: **69
-filer, 15,9 timmar**. **Flaggfrekvensen ligger på 1,3–2 % av orden oberoende av
+Läget (mätt 2026-10-02): **366 ljudfiler, 308 transkript** — 226 med `small`, 81
+med `medium`. 67 är applicerade och 54 har `.md`. Kvar att transkribera: **57
+filer, 12,3 timmar**.
+
+**202 transkript står på "ej flaggad" i väljaren, och det är inget fel:** steg b
+har aldrig körts på `small`-omgången från 5–6 september. Undrar du någon gång om
+flaggning gått förlorad är testet att leta **föräldralösa `-corrections`-filer**
+bredvid ljudet — flaggningen bor där, så ett försvunnet transkript lämnar sin
+korrigeringsfil kvar. Noll föräldralösa betyder att inget är borta. **Flaggfrekvensen ligger på 1,3–2 % av orden oberoende av
 ämne** i de sorterade mapparna — det är en egenskap hos ljudet och modellen, inte
 hos domänen, och detektorn klarade tre domäner där ordlistan var tom. Filer i
 `incoming/`, som flaggas mot hela ordlistan, ligger dubbelt så högt; om det är
@@ -273,10 +279,10 @@ underlaget med förbehåll står i [CLAUDE.md](CLAUDE.md), steg a.
 | medium | 80,1 % | ~0,85× | ~52 h |
 | large | (facit) | ~1,67× | ~101 h |
 
-Sedan dess har arkivet körts: **15,9 timmar återstår** (69 filer, mätt
-2026-09-22), alltså ungefär åtta CPU-timmar med `small`.
+Sedan dess har arkivet körts: **12,3 timmar återstår** (57 filer, mätt
+2026-10-02), alltså ungefär sex CPU-timmar med `small`.
 
-Dessförinnan `medium` — 82 av transkripten är gjorda med den, och det
+Dessförinnan `medium` — 81 av transkripten är gjorda med den, och det
 är inget problem: JSON:en bär `model`, så varje fil är självförklarande.
 Transkribera **inte** om dem för att byta modell; sidecarens ordindex refererar
 den gamla texten, och granskningsbesluten skulle gå förlorade.
@@ -345,7 +351,7 @@ laptop/arbetsstation.
 inställningar: 0,56× (referensen), 0,76–0,82×, 0,99×, 1,25–1,31×, och 1,52–1,99×
 med ordlisteprompt. Spannet är 3,5× och orsaken är okänd — se issue #8. Räkna
 inte på bästafallet: skillnaden mellan 0,8× och 1,5× var ~100 timmar CPU när 60,5
-timmar ljud återstod (uppmätt 2026-09-04; idag återstår 15,9 h). Siffrorna
+timmar ljud återstod (uppmätt 2026-09-04; idag återstår 12,3 h). Siffrorna
 är inte omprövade sedan bytet till `small`, som bör ligga lägre — men spannets
 storlek lär bestå.
 

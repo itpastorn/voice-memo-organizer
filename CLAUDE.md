@@ -22,7 +22,7 @@ inte steg b–e i förväg. Låt inte "det behövs sedan" motivera kod som inte 
 **Utveckling sker i VSCode** med Claude-tillägget. Denna CLAUDE.md är den
 gemensamma kontexten mellan sessioner och verktyg.
 
-### Nuvarande status (2026-09-22)
+### Nuvarande status (2026-10-02)
 
 | Steg | Läge |
 | --- | --- |
@@ -36,10 +36,26 @@ gemensamma kontexten mellan sessioner och verktyg.
 | **e** SQLite-index | ⬜ |
 | **f** metadatataggar på ljudet | ⬜ planerad, ej byggd |
 
-**Arkivet, mätt 2026-09-22:** 364 ljudfiler, 293 transkript (208 `small`,
-82 `medium`, 3 utan modellfält), 57 applicerade, 58 `.md`. Kvar att
-transkribera: **69 filer, 15,9 timmar.** Sex filer spärrade av namnvakten,
-0 avvikande ljudfilnamn (versalerna försvann i omdöpningen 2026-08-28).
+**Arkivet, mätt 2026-10-02:** 366 ljudfiler, 308 transkript (226 `small`,
+81 `medium`, 1 utan modellfält), 67 applicerade, 54 `.md`. Kvar att
+transkribera: **57 filer, 12,3 timmar.** **Namnvakten spärrar ingenting längre**
+och inget ljudfilnamn avviker — se File Naming Convention.
+
+**Flaggningens läge, och varför det ser värre ut än det är.** Filväljaren visar
+202 filer på "ej flaggad", 67 applicerade, 37 under granskning och 2 utan
+funna fel. De 202 har **aldrig** varit flaggade — 196 av dem kommer ur
+`small`-körningen 5–6 september, och steg b har inte körts på den omgången.
+Två tredjedelar av arkivet står alltså på "ej flaggad" av en orsak som inte är
+ett fel.
+
+**Diagnosen när det ändå känns som ett tapp** (frågan kom 2026-10-01): leta
+**föräldralösa `-corrections`-filer i datamappen**. Flaggningen bor bredvid
+ljudet, så ett flaggat transkript som försvunnit lämnar sin korrigeringsfil
+kvar. Noll föräldralösa = ingenting förlorat. Räkna också oflaggade över tid:
+de låg på 202 både 22 september och 1 oktober medan de flaggade gick från 91
+till 106, alltså exakt de nya transkripten. Arbetskopiorna i `granska/state/`
+är ett sämre mått — de blir föräldralösa av varje omdöpning, utan att något
+gått fel.
 
 **Sex filer har gått hela vägen a → c**, i fem olika ämnesområden: NAR/politik,
 skapelse/evolution, teologi (bokmaterial), AI/teknik, och en kort felfri fil.
@@ -60,8 +76,8 @@ Batch finns för **alla** körbara steg: a, b, apply och c. `data.test_file` byt
 för hand men läses numera bara av steg a — allt efter granskningen följer GUI:ts
 filval (`aktuell.py` visar vilken det är).
 
-**Namnvakten spärrar sex filer** (`namnvakt.py`) — se File Naming Convention.
-Ett av fallen dolde 47 minuter ljud som aldrig kunnat transkriberas.
+**Namnvakten spärrar inget** (`namnvakt.py`). Alla sex kollisionerna är
+avgjorda av Lars under senare hälften av september — se File Naming Convention.
 
 **Arkivet är till största delen transkriberat.** Aktuella siffror står i
 Nuvarande status ovan; `small`-transkripten kördes 2026-09-05–06. Allt i
@@ -393,7 +409,7 @@ int8 på CPU.
 - **Standardmodell: `kb-whisper-small`** sedan 2026-09-04. `kb-whisper-large`
   körs på begäran för viktiga filer och skriver över utdatan. Underlaget står
   nedan — det vänder på det förväntade, och därför är det värt att läsa noga.
-- **Arkivet är blandat: 82 transkript med `medium`, 201 med `small`.** Ingenting
+- **Arkivet är blandat: 81 transkript med `medium`, 226 med `small`.** Ingenting
   behöver göras åt det: JSON:en bär `model`, så varje fil är självförklarande, och
   en omtranskribering skulle radera granskningsbesluten (sidecarens `global_index`
   refererar den gamla textens ordpositioner). Blanda alltså med flit.
@@ -1077,8 +1093,10 @@ Never use underscores anywhere in filenames or project filenames.
 skript kontrollerar filnamnet innan det arbetar. Vakten är inte en spärr mot
 konventionsbrott — den är en spärr mot **kollisioner**.
 
-Skillnaden är mätt, inte antagen. **113 av 363 ljudfiler bryter mot konventionen**
-(112 versaler, 1 icke-ASCII, 1 blanksteg). Alla 113 är ofarliga: `transkribera.py`
+Skillnaden är mätt, inte antagen. När vakten byggdes bröt **113 av 363
+ljudfiler** mot konventionen (112 versaler, 1 icke-ASCII, 1 blanksteg) — borta
+sedan omdöpningen 2026-08-28, men mätningen är kvar för att den avgjorde
+designen. Alla 113 var ofarliga: `transkribera.py`
 normaliserar stammen på väg ut, så `zego-Trump-akrist-1.m4a` ger
 `zego-trump-akrist-1.json` och allt nedströms är redan rent. En spärr mot versaler
 hade stoppat en tredjedel av arkivet utan att avvärja ett enda fel — och den hade
@@ -1092,7 +1110,28 @@ Det farliga är i stället när normaliseringen får två filer att falla ihop:
 | samma stam i två temamappar | `granska/state/` är platt — sidecars skriver över varandra, och besluten landar i fel fil |
 | transkript vars egen stam inte är normaliserad | `json_path_for()` kan aldrig härleda fram till det; härledda namn blandas med grannens |
 
-**Sex filer spärrades först, och en av dem dolde ett verkligt tapp.**
+**Alla kollisioner är avgjorda — vakten spärrade noll vid mätningen
+2026-10-01.**
+Historiken nedan står kvar, för den är skälet till att vakten finns: varje fall
+var ett tyst fel som ingenting annat i kedjan hade sagt ifrån om. Utfallen:
+
+| Fall | Avgjort |
+| --- | --- |
+| `zego-torpseminarium` (`.aac` 47:18 + `.m4a` 54:20) | **Lars raderade allt med flit** när memot var färdigt. `.md`:n ligger i `predikningar-studier/karismatik-helande/mina-predikningar-och-foredrag/`; ljudet och transkriptet är borta ur arkivet. De 47 minuterna i `.aac` blev aldrig text — det var ett medvetet val, inte ett tapp. |
+| `zego-benefit-of-the-doubt-…` (`.m4a`/`.mp3`) | dubbletten borta |
+| `zego-predikan-2` i två temamappar | en kopia borta; den i `andra-ideer` står kvar, ännu otranskriberad |
+| `zego-liberalteologi-…-halldorf` i `incoming/` + sorterad | kopian i inkorgen raderad 2026-09-19 |
+
+**Två rester att känna till.** `granska/state/` bär sex föräldralösa
+arbetskopior efter uppstädningen — arkivkopian är platt, så den följer inte med
+när en stam försvinner eller byter namn. Fem av dem bär inga beslut;
+torpseminariets två bär 183 respektive 96, men de är **förbrukade** (de
+applicerades och blev `.md` redan 20 juli). Och `zego-planering-med-ai` tappade
+`.json`/`.srt`/`.txt` men har kvar sitt ljud: den behöver transkriberas och
+flaggas om, vilket kostar CPU och ~$0,25 men ingen granskningstid — dess
+arbetskopia hade noll fattade beslut.
+
+**Så såg fallen ut, och varför de var farliga.**
 `zego-torpseminarium.aac` (47:18) och `zego-torpseminarium.m4a` (54:20) är **två
 olika inspelningar** — inte samma ljud i två format. Bara `.m4a`:ns 54 minuter är
 transkriberade; `.aac`:ns 47 minuter har aldrig kunnat komma in i pipelinen,
@@ -1110,7 +1149,7 @@ hash), och ingen av dem har transkript. Vakten jämför stammar över hela arkiv
 oavsett mapp, så en fil som laddas upp i inkorgen men redan finns sorterad fångas
 innan den kostar CPU. Det är precis den dubbelregistrering ett flöde med en
 inkorg bjuder in till. **Löst 2026-09-19:** Lars raderade kopian i `incoming/`;
-den i `bibelsyn-lib-fund-equmeniakyrkan/` står kvar. Namnvakten är tillbaka på sex.
+den i `bibelsyn-lib-fund-equmeniakyrkan/` står kvar.
 
 Vakten skiljer därför på tre utfall: **spärrat** (avbryter, exit-kod 2),
 **varning** (körs vidare — t.ex. ett avvikande ljudfilnamn, eller ett transkript
@@ -1156,9 +1195,9 @@ Tre regler som är lätta att göra fel, och som alla tre kostade en rättning:
 - **Suffixet härleds aldrig om, bara stammen byts.** En runda 2-sidecar pekar med
   flit på `<stam>-bak2.json` — rundans orörda bas. Att "rätta" den till
   `<stam>.json` hade riktat granskningen mot den redan applicerade texten.
-- **Filer som namnvakten spärrar rörs inte.** `zego-torpseminarium` har två
+- **Filer som namnvakten spärrar rörs inte.** `zego-torpseminarium` hade två
   ljudfiler; att välja den alfabetiskt första hade satt `.aac` (47 min) som källa
-  för en text som kommer ur `.md`:ns `.m4a` (54 min).
+  för en text som kom ur `.md`:ns `.m4a` (54 min).
 - **`titel` i `.md` är maskinsatt** — uppmätt 54 av 55 filer — och följer därför
   stammen. En titel med blanksteg eller versal är en rubrik du skrivit och rörs
   inte.
@@ -1231,9 +1270,10 @@ Skriptet självt, kodboken och databasen bor i detta projekt
    annat?
 3. **Sortering — besvarad, och byggd 2026-09-21.** `sortera.py` + `sortering.toml`
    föreslår temamapp; Lars godkänner en fil i taget. Se Sorteringen under Pipeline.
-4. **Resten av arkivet.** 69 ljudfiler / 15,9 h återstår (2026-09-22), ned från
+4. **Resten av arkivet.** 57 ljudfiler / 12,3 h återstår (2026-10-02), ned från
    277 / 60,5 h före körningen 2026-09-05–06. Inget av det ligger i `incoming/`.
-   Issue #9 (vänteläget) är inte åtgärdat i koden.
+   Vänteläget (issue #9) är åtgärdat i koden men obevisat i skarp drift, så
+   nattkörningen av resten är fortfarande det som ska visa att det håller.
 5. **Hur hjälper man Whisper med ovanliga ord?** Ordlisteprompt via hotwords är
    prövad och underkänd (se steg a). Kvar att pröva: `kb-whisper-large` på
    arbetsstationen, revision-diff som flaggkälla (issue #5), eller att helt

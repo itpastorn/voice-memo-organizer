@@ -304,8 +304,8 @@ def ljud_for(json_path: Path) -> str | None:
 
     None när det inte är entydigt. Två ljudfiler med samma stam är just det
     fallet namnvakten spärrar, och att välja den alfabetiskt första vore att
-    gissa: zego-torpseminarium.aac och .m4a är två OLIKA inspelningar, och
-    transkriptet kommer ur .m4a."""
+    gissa: zego-torpseminarium.aac och .m4a var två OLIKA inspelningar, och
+    transkriptet kom ur .m4a. (Filen är sedan raderad — exemplet är skälet.)"""
     stam = json_path.stem
     traffar = [p.name for p in sorted(json_path.parent.iterdir())
                if p.is_file() and p.suffix.lower() in k.LJUDANDELSER

@@ -265,8 +265,9 @@ def antal_operationer(side: dict) -> int:
 # Det farliga är i stället normaliseringens KOLLISIONER: faller två ljudfiler
 # ihop till samma stam pekar de på samma .json, och den ena inspelningen kommer
 # aldrig in i pipelinen. Uppmätt i arkivet: zego-torpseminarium.aac (47:18) och
-# zego-torpseminarium.m4a (54:20) är två OLIKA inspelningar med samma stam, och
-# bara .m4a:ns 54 minuter finns transkriberade. Ingenting sa ifrån.
+# zego-torpseminarium.m4a (54:20) var två OLIKA inspelningar med samma stam, och
+# bara .m4a:ns 54 minuter blev transkriberade. Ingenting sa ifrån. (Lars har
+# sedan raderat det memot färdigt; exemplet står kvar för att det är skälet.)
 # --------------------------------------------------------------------------- #
 
 class NamnFel(Exception):

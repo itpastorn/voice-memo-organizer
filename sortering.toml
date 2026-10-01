@@ -39,7 +39,8 @@ namn = "1 Meta"
 mapp = "meta-admin-todo-fix"
 ord = ["kassetter", "kassettband", "notebooklm", "databas", "skript", "claude",
        "transkription", "transkribering", "transkribera", "whisper", "python",
-       "pipeline", "röstmemo", "röstinspelning", "sortering", "mappstruktur"]
+       "pipeline", "röstmemo", "röstinspelning", "sortering", "mappstruktur",
+       "Gemini Notebook"]
 
 [[gren]]
 namn = "2 Skumt och dumt"
