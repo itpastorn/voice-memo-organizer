@@ -21,8 +21,8 @@ vmohjalp                 # listar kommandona
 ```
 
 Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
-`tokenvakt`, `trvakt`, `sortera`, `synka`, `propagera`, `applicera`, `forbattra`
-och `vmo`. Alla tar samma flaggor som skripten
+`tokenvakt`, `trvakt`, `sortera`, `synka`, `radera`, `propagera`, `applicera`,
+`forbattra` och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
 fungerar när du vill åt något som inte har en genväg.
@@ -208,6 +208,43 @@ Säg **"den här inspelningen handlar om ..."** i memots första halvminut, så
 avgörs saken direkt oavsett nyckelord. Det är disciplinen som gör sorteringen
 tillförlitlig över tid; reglerna behöver inte vara perfekta från början.
 
+### 7. Radera ett memo du är klar med
+
+Minnesanteckningar man är färdig med ska kunna lämna systemet helt.
+
+```bash
+radera zego-x                      # visa vad som skulle försvinna
+radera zego-x --kor                # gör det; .md och -borttaget.txt lämnas kvar
+radera zego-x --kor --totalt       # ta .md och -borttaget.txt också
+radera zego-x --kor --till klart   # ...eller flytta dem till en annan mapp
+```
+
+**`--dry-run` är standard** — skriptet skriver bara med `--kor`, som
+`synka --kor`. Och **ingen upptäck-och-radera**: en stam i taget, utpekad för
+hand. Finns stammen i mer än en mapp vägrar skriptet.
+
+Rapporten säger vad du kastar innan du kastar det: ljudets längd, modell, om
+filen är applicerad, hur många granskningsbeslut sidecaren bär, och hur många
+strykningsförslag `-borttaget.txt` innehåller. Bär sidecaren **fattade men
+oapplicerade** beslut varnar den — det är granskningstid som går förlorad.
+
+**Ljudet är det enda som inte kan återskapas.** Allt annat är derivat *av
+ljudet*, så när det är borta är `.md` det enda som finns — och den är städad av
+steg c, alltså inte en förlustfri kopia: ordens tidsstämplar och dina exakta
+formuleringar fanns bara i JSON:en. Därför behålls `.md` och `-borttaget.txt`
+som standard. `-borttaget.txt` bär dessutom det steg c föreslog att kapa, och
+det materialet finns *bara* där och i JSON:en.
+
+Skriptet städar också de **tre ställen utanför datamappen** som annars lämnar
+spöken i filväljaren: arbetskopian i `granska/state/`, märkningen i
+`granska/status.json` och GUI:ts filval i `granska/current.json`. Det första är
+viktigast — `state/` slås upp på bara stammen, så en framtida inspelning med
+samma namn skulle ärva de gamla besluten.
+
+Varje radering skriver en rad i **`logs/raderat.log`** (versionerad, till
+skillnad från mätloggarna). Utan den krymper arkivet tyst och en medveten
+radering går inte att skilja från en bugg.
+
 | Vill du... | Gör så |
 | --- | --- |
 | veta vilken fil som är vald | `aktuell` — fil, mapp, flaggor kvar, applicerad eller ej |
@@ -216,6 +253,7 @@ tillförlitlig över tid; reglerna behöver inte vara perfekta från början.
 | hitta transkriptioner som inte duger alls | `trvakt` — upprepningsloopar och filer med för få ord |
 | få ett memo ur `incoming/` till rätt temamapp | `sortera` föreslår numrerat, `sortera --flytta N` genomför |
 | jag har döpt om eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
+| ta bort ett memo jag är helt klar med | `radera STAM` visar, `radera STAM --kor` gör det |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |
 | köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `"$PY" "$VMO/transkribera.py"` |

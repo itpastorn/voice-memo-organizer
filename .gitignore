@@ -3,7 +3,12 @@ notes.txt
 notes.md
 venv/
 models/
-logs/
+# Mätloggarna är maskinlokala, men raderingsloggen är projektets minne av
+# vad som tagits bort med flit — utan den går en medveten radering inte att
+# skilja från en bugg. Katalogen måste uteslutas med logs/* och inte logs/,
+# annars stiger git aldrig ner i den och undantaget får ingen verkan.
+logs/*
+!logs/raderat.log
 # Genererad pekare åt granska/-GUI:t (skrivs av migrera-corrections.py)
 granska/current.json
 # Arbetskopia av besluten (GUI:t redigerar den; fröas ur /data-sidecaren)

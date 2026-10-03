@@ -7,7 +7,7 @@
 #     source setup.sh          (eller: . setup.sh)
 #
 # Ger: harmapp, batch, flagga, granska, aktuell, namnvakt, tokenvakt, trvakt,
-# sortera, synka, propagera, applicera, forbattra, vmo.
+# sortera, synka, propagera, applicera, forbattra, radera, vmo.
 # Kör `vmohjalp` för listan med förklaringar.
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
@@ -40,6 +40,7 @@ else
     trvakt()    { "$PY" "$VMO/transkriptionsvakt.py" "$@"; }   # duger transkriptionen?
     sortera()   { "$PY" "$VMO/sortera.py"            "$@"; }   # förslag på temamapp
     synka()     { "$PY" "$VMO/synka-namn.py"         "$@"; }   # laga efter omdöpt ljud
+    radera()    { "$PY" "$VMO/radera.py"             "$@"; }   # ta bort ett memo helt
     vmo()       { cd "$VMO" || return; }
     granska()   { ( cd "$VMO/granska" && docker compose up ); }  # GUI på :8137
 
@@ -76,6 +77,7 @@ Kommandon (alla tar samma flaggor som skripten):
   sortera                 numrerade förslag på temamapp för memon i incoming/
   sortera --flytta N      godkänn förslag N (--till M: välj mapp själv)
   synka [--kor]           härledda filer följer med när ljudet döpts om
+  radera STAM [--kor]     ta bort ett memo helt (--totalt: även .md)
   propagera [--dry-run]   sprid fattade rättelser till orättade förekomster
   applicera [--dry-run]   skriv in besluten i alla färdiggranskade filer
   forbattra [--dry-run]   steg c -> .md, med negationsvakt efter varje fil

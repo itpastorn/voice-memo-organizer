@@ -235,6 +235,58 @@ Flytten tar hela familjen — ljud, transkript och allt härlett — i ett svep,
 vägrar när ett målnamn redan finns. Arbetskopian i `granska/state/` är platt och
 behöver inte flyttas.
 
+### Radering (`radera.py`)
+
+Memon som bara var minnesanteckningar ska kunna lämna systemet helt — ljud,
+transkript och allt härlett. Lars gjorde det för hand med `zego-torpseminarium`
+2026-09/10; skriptet gör samma sak reproducerbart.
+
+**Formen är `synka-namn.py`:s, och av samma skäl.** `--dry-run` är standard och
+skriptet skriver bara med `--kor`. Ingen upptäck-och-radera finns: en stam i
+taget, utpekad för hand, och en stam som förekommer i mer än en mapp avvisas.
+Ett svep som gissar vilka memon som är "klara" skulle sätta hela arkivet på
+spel för att spara tangenttryck, och ljudet är det enda i projektet som inte
+kan återskapas.
+
+**`.md` och `-borttaget.txt` behålls som standard**; `--totalt` raderar dem
+också, `--till <mapp>` flyttar dem i stället. Skälet att de är förvalda som
+bevarade: `.md` är memots innehåll, och den är **inte** en förlustfri kopia av
+JSON:en — steg c städar språket och rättar tysta transkriptionsfel, så ordens
+tidsstämplar och Lars exakta formuleringar försvinner med JSON:en. Och
+`-borttaget.txt` säger själv att materialet den listar *bara* finns där och i
+JSON:en (15 filer har en sådan).
+
+**Tre ställen utanför datamappen städas**, annars blir de spöken i filväljaren:
+
+| Ställe | Varför det måste bort |
+| --- | --- |
+| `granska/state/<stam>-corrections*.json` | `valj_sidecar()` slår upp arbetskopian på **bara stammen**, oavsett temamapp. En framtida inspelning med samma stam skulle ärva de gamla besluten och få flaggor ritade på fel ord. Apply:s `word_count`-vakt fångar det oftast — men först efter att man sett fel. |
+| `granska/status.json` | uppslagningen faller tillbaka på filnamnet, så en kvarglömd "ny transkription behövs" kan återuppstå på en ny fil med samma namn |
+| `granska/current.json` | pekar den på en raderad fil faller `aktuell`, `applicera`, `forbattra` och `negationsvakt` tillbaka på `data.test_file` — alltså fel memo, tyst |
+
+**Varje radering loggas i `logs/raderat.log`, och den filen är versionerad.**
+`.gitignore` utesluter `logs/*` och undantar just den — katalogen måste
+uteslutas med `logs/*` och inte `logs/`, annars stiger git aldrig ner i den och
+undantaget får ingen verkan. Skälet att logga: den 1 oktober frågade Lars om han
+tappat filer, och det tog ett dussin mätningar att fastställa att ingenting var
+borta. Utan logg krymper arkivet tyst och **en medveten radering går inte att
+skilja från en bugg** — CLAUDE.md:s egna siffror drev också (82 medium blev 81
+när torpseminariet försvann).
+
+Rapporten säger vad som kastas innan det kastas: ljudlängd, modell, om filen är
+applicerad, antal granskningsbeslut, antal strykningsförslag. Bär sidecaren
+**fattade men oapplicerade** beslut varnar den särskilt — det är Lars ögon som
+går förlorade, inte bara CPU. Efter raderingen kontrolleras memots mapp direkt
+(samma kontroll namnvakten gör), och ett ofullständigt utfall ger exit 1.
+
+**Verifierat mot ett låtsasarkiv**, aldrig mot riktiga filer: torrkörning rör
+ingenting, standardläget raderar 6 av 8 filer och städar alla tre GUI-ställena,
+`--totalt` tar alla 8, `--till` flyttar behållarna och en andra körning säger
+"inget att radera" utan att logga en nollrad. `--till` mot en mapp som inte
+finns avbryter innan något raderas. Fällan som dök upp på vägen:
+fullständighetskontrollen letade i hela arkivet och räknade då de filer `--till`
+just flyttat som kvarglömda — den letar nu bara i memots egen mapp.
+
 **`zego-prepare`** är ett Git Bash-alias för
 `workspace/adminscripts/zego-prepare.sh` — ett annat repo, inte en del av det här
 projektet. Det döper **bara om** `.m4a`-filerna i en mapp, i tre steg: stryker
