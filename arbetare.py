@@ -203,6 +203,7 @@ def kor_jobb(jobb: dict) -> int:
            and f["global_index"] not in tackta]
 
     if nya:
+        flagga_ord = "ny flagga" if len(nya) == 1 else "nya flaggor"
         for f in sorted(nya, key=lambda x: x["global_index"]):
             rapport.rad(f"  ord {f['global_index']:<6} {f['heard']:<18} -> "
                         f"{f['ai_guess']:<18} ({f['_poang']:.2f})")
@@ -221,14 +222,15 @@ def kor_jobb(jobb: dict) -> int:
         steg.append({"namn": "propagering", "lage": "klar", "nya_flaggor": len(nya),
                      "ankare": n_ankare, "provade": n_provade})
         steg.append({"namn": "applicering", "lage": "hoppad",
-                     "skal": f"{len(nya)} nya flaggor att granska först"})
+                     "skal": f"{len(nya)} {flagga_ord} att granska först"})
         rapport.rad()
-        rapport.rad(f"{len(nya)} nya flaggor — INGET applicerat.")
-        rapport.rad(f"Skrev {forslag.name}. Ladda om granskningsvyn, avgör dem, "
-                    f"och tryck igen.")
+        rapport.rad(f"{len(nya)} {flagga_ord} — INGET applicerat.")
+        rapport.rad(f"Skrev {forslag.name}. Ladda om granskningsvyn, avgör "
+                    f"{'den' if len(nya) == 1 else 'dem'}, och tryck igen.")
         skriv_status(jobb, "klar", steg=steg, rapport=rapport, startad=startad,
-                     sammanfattning=f"{len(nya)} nya flaggor från propageringen "
-                                    f"— inget applicerat. Granska dem först.",
+                     sammanfattning=f"{len(nya)} {flagga_ord} från propageringen "
+                                    f"— inget applicerat. Granska "
+                                    f"{'den' if len(nya) == 1 else 'dem'} först.",
                      nasta="ladda-om")
         return 0
 

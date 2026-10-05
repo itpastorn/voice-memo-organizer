@@ -263,6 +263,15 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   /* Propagerade flaggor är inget fel — de är nytt arbete. Egen färg, inte röd. */
   .nytt { background:#e0e7ff; border:1px solid #6366f1; color:#3730a3;
           border-radius:5px; padding:2px 9px; font-size:13px; font-weight:600; }
+  #jobbBtn { font:600 13px system-ui; padding:.4rem .6rem; border:1px solid var(--line);
+             background:#fff; border-radius:6px; cursor:pointer; width:100%; }
+  #jobbBtn:hover:not(:disabled) { border-color:var(--muted); }
+  #jobbBtn:disabled { color:var(--muted); cursor:not-allowed; background:#f6f6f6; }
+  #jobbBtn.kor { background:#e0e7ff; border-color:#6366f1; color:#3730a3; }
+  #jobbLogg { font:12px/1.45 ui-monospace,Menlo,Consolas,monospace; white-space:pre-wrap;
+              background:#f6f6f6; border:1px solid var(--line); border-radius:6px;
+              padding:.5rem .6rem; margin:.5rem 0 0; max-height:16rem; overflow:auto; }
+  #jobbHint.fel { color:#7f1d1d; font-weight:600; }
   #statusBtn { font:600 13px system-ui; padding:.4rem .6rem; border:1px solid var(--line);
                background:#fff; border-radius:6px; cursor:pointer; width:100%; }
   #statusBtn:hover { border-color:var(--muted); }
@@ -333,6 +342,33 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
            value="<?= htmlspecialchars($filStatus['note'] ?? '') ?>" autocomplete="off">
     <p class="hint">Märkningen syns i filväljaren och gör att <code>batch-flagga.py</code>
       hoppar över filen — ingen mening att flagga ord i en transkription som ska göras om.</p>
+  </div>
+
+  <?php
+  // Nästa steg: propagering + applicering, utfört av arbetare.py. Knappen är
+  // bara meningsfull när allt är avgjort — en apply med ogranskade flaggor
+  // stämplar filen som applicerad och lämnar dem orörda, vilket får
+  // batch-forbattra att köa den för steg c på text som bär kvar felen.
+  $nastaSpar = '';
+  if ($filStatus) {
+      $nastaSpar = 'Filen är märkt "ny transkription behövs".';
+  } elseif ($decCount['pending'] > 0) {
+      $nastaSpar = "Avgör de {$decCount['pending']} kvarvarande flaggorna först.";
+  }
+  ?>
+  <div class="panel" id="jobbPanel">
+    <h2>Nästa steg</h2>
+    <button id="jobbBtn"<?= $nastaSpar !== '' ? ' disabled' : '' ?>>Propagera + applicera</button>
+    <p class="hint" id="jobbHint"><?= $nastaSpar !== ''
+        ? htmlspecialchars($nastaSpar)
+        : 'Letar efter orättade syskon till dina rättelser, och skriver sedan in '
+        . 'besluten i JSON:en. Hittar propageringen något nytt appliceras '
+        . 'ingenting — du får avgöra det först.' ?></p>
+    <pre id="jobbLogg" hidden></pre>
+    <div class="actions" id="jobbNasta" hidden>
+      <button id="jobbLaddaOm" hidden>Ladda om och granska</button>
+      <button id="jobbValjaren" hidden>Till filväljaren</button>
+    </div>
   </div>
 
   <div class="panel" id="audioPanel">
@@ -548,7 +584,12 @@ function saveCorrect(){
   doSave(v===heard? 'accept':'replace', v===heard? '':v);
 }
 
+// Spärren medan arbetaren kör: apply skriver om JSON:en, och ett beslut som
+// sparas mitt i hamnar i en sidecar vars underlag just bytt ordantal.
+let JOBB_KOR = false;
+
 function doSave(decision, replacement){
+  if (JOBB_KOR) return;   // ett jobb skriver i JSON:en just nu
   const i=focus, f=FLAGS[i];
   const body={ global_index:i, decision, replacement:replacement||'',
     heard: f? f.heard : WORDS[i].w.trim(),
@@ -592,6 +633,7 @@ function rebuildOsakerList(){
 }
 
 function savePhrase(){
+  if (JOBB_KOR) return;   // ett jobb skriver i JSON:en just nu
   const v=document.getElementById('phraseinput').value.trim();
   if(!v) return;
   const a=Math.min(selStart,selEnd), b=Math.max(selStart,selEnd), orig=spanText(a,b);
@@ -654,6 +696,7 @@ function step(dir){
 }
 
 function saveInsert(){
+  if (JOBB_KOR) return;   // ett jobb skriver i JSON:en just nu
   const w=document.getElementById('insertinput').value.trim();
   if(!w || insertAfter===null) return;
   const ai=insertAfter;
@@ -778,6 +821,92 @@ markPhrases();
 rebuildPhraseList();
 rebuildInsertList();
 updateAudioUI();
+
+// --- Nästa steg: propagering + applicering via arbetare.py ------------------
+// PHP kan inte köra Python, så knappen lägger en beställning i state/ och vi
+// pollar jobb.php tills arbetaren svarat. Tre tidsgränser gör tystnad läsbar:
+// inget svar alls, ett jobb som fastnat, och ett som avslutats.
+const jobbBtn = document.getElementById('jobbBtn');
+const jobbHint = document.getElementById('jobbHint');
+const jobbLogg = document.getElementById('jobbLogg');
+const jobbNasta = document.getElementById('jobbNasta');
+let jobbId = null, pollTimer = null, forstaSvar = 0;
+
+function jobbFel(text, atgard){
+  jobbHint.classList.add('fel');
+  jobbHint.textContent = atgard ? text + '  ' + atgard : text;
+  jobbBtn.classList.remove('kor');
+  jobbBtn.disabled = false;
+  JOBB_KOR = false;
+}
+
+function stoppaPoll(){ if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+function visaNasta(nasta){
+  jobbNasta.hidden = false;
+  if (nasta === 'ladda-om') {
+    const b = document.getElementById('jobbLaddaOm');
+    b.hidden = false; b.onclick = () => location.reload();
+  } else if (nasta === 'oppna-valjaren') {
+    const b = document.getElementById('jobbValjaren');
+    b.hidden = false; b.onclick = () => location.href = 'valj.php';
+  }
+}
+
+function pollaJobb(){
+  fetch('jobb.php').then(r => r.json()).then(res => {
+    const st = res.status;
+    if (!st || st.id !== jobbId) {
+      // Arbetaren har inte tagit jobbet än. Tio sekunder är gott om tid för en
+      // poll på två — därefter är den sannolikt inte uppe.
+      if (Date.now() - forstaSvar > 10000) {
+        stoppaPoll();
+        jobbFel('Arbetaren svarar inte.',
+                'Kör "docker compose up" i granska/ och se om tjänsten arbetare är uppe.');
+      }
+      return;
+    }
+    if (st.rader && st.rader.length) { jobbLogg.hidden = false; jobbLogg.textContent = st.rader.join('\n'); }
+    if (st.lage === 'kor') {
+      jobbHint.textContent = 'Kör…';
+      if (res.arbetare && !res.arbetare.vaken) {
+        stoppaPoll();
+        jobbFel('Jobbet verkar ha fastnat — arbetaren slutade höra av sig.',
+                'Se terminalen där "docker compose up" kör.');
+      }
+      return;
+    }
+    stoppaPoll();
+    JOBB_KOR = false;
+    jobbBtn.classList.remove('kor');
+    if (st.fel) {
+      jobbFel(st.fel.meddelande || 'Okänt fel', st.fel.atgard || '');
+    } else {
+      jobbHint.classList.remove('fel');
+      jobbHint.textContent = st.sammanfattning || 'Klart.';
+    }
+    visaNasta(st.nasta);
+  }).catch(e => { stoppaPoll(); jobbFel('Nätverksfel: ' + e, ''); });
+}
+
+if (jobbBtn) jobbBtn.addEventListener('click', () => {
+  jobbBtn.disabled = true;
+  jobbHint.classList.remove('fel');
+  jobbHint.textContent = 'Beställer…';
+  fetch('jobb.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) { jobbFel(res.error || 'okänt fel', ''); return; }
+      jobbId = res.id;
+      JOBB_KOR = true;
+      jobbBtn.classList.add('kor');
+      jobbHint.textContent = 'Kör…';
+      forstaSvar = Date.now();
+      pollTimer = setInterval(pollaJobb, 1500);
+      pollaJobb();
+    })
+    .catch(e => jobbFel('Nätverksfel: ' + e, ''));
+});
 </script>
 </body>
 </html>
