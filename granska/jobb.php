@@ -66,11 +66,32 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
 
 require_once __DIR__ . '/gemensam.php';
 
-$cur = las($here . '/current.json');
-if (!$cur || empty($cur['stem'])) bail(409, 'ingen fil är vald i GUI:t');
+// Filen kan pekas ut explicit (knappen i filväljaren gäller en annan rad än den
+// som är vald) eller underförstås ur current.json (knappen i granskningsvyn).
+// Jobbet bär alltid sina egna sökvägar, så Lars kan byta fil medan det kör.
+$in = json_decode(file_get_contents('php://input'), true);
+$rel = is_array($in) ? trim((string) ($in['rel'] ?? '')) : '';
 
-$stem = $cur['stem'];
-$arbetskopia = basename($cur['sidecar_json'] ?? '');
+if ($rel !== '') {
+    if (str_contains($rel, '..') || str_starts_with($rel, '/') || !str_ends_with($rel, '.json')) {
+        bail(400, 'ogiltig sökväg');
+    }
+    $stem = basename($rel, '.json');
+    $katalog = dirname($rel) === '.' ? '' : dirname($rel) . '/';
+    // Senaste rundan vinner, som korrigeringar.valj_sidecar() och valj.php.
+    $arbetskopia = '';
+    foreach (["$stem-corrections-2.json", "$stem-corrections.json"] as $kandidat) {
+        if (is_file($stateDir . '/' . $kandidat)) { $arbetskopia = $kandidat; break; }
+    }
+    $cur = ['stem' => $stem, 'transcript_json' => $rel,
+            'sidecar_json' => $katalog . $arbetskopia];
+} else {
+    $cur = las($here . '/current.json');
+    if (!$cur || empty($cur['stem'])) bail(409, 'ingen fil är vald i GUI:t');
+    $stem = $cur['stem'];
+    $arbetskopia = basename($cur['sidecar_json'] ?? '');
+}
+
 $workPath = $stateDir . '/' . $arbetskopia;
 if ($arbetskopia === '' || !is_file($workPath)) {
     bail(409, 'ingen arbetskopia i state/ — öppna filen i granskningsvyn först');

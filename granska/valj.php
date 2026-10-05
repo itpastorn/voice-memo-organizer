@@ -154,6 +154,17 @@ $cur = json_decode(@file_get_contents($here . '/current.json'), true) ?: [];
 $aktiv = $cur['transcript_json'] ?? '';
 $statusAlla = json_decode(@file_get_contents($here . '/status.json'), true) ?: [];
 
+// Arbetarens läge. Jobbstatusen gäller EN fil i taget; förslagsfilerna visar
+// vilka memon som har propagerade flaggor som väntar på att fogas in vid nästa
+// sidvisning. Väljaren skriver aldrig något av detta — arbetaren äger det.
+$jobbSt = json_decode(@file_get_contents($here . '/state/jobb-status.json'), true) ?: [];
+$jobbKorStem = ($jobbSt['lage'] ?? '') === 'kor' ? ($jobbSt['stem'] ?? '') : '';
+$vantandeForslag = [];
+foreach (glob($here . '/state/*-propagering.json') ?: [] as $f) {
+    $d = json_decode(@file_get_contents($f), true);
+    if (is_array($d) && !empty($d['stem'])) $vantandeForslag[$d['stem']] = count($d['flaggor'] ?? []);
+}
+
 function hms(?float $s): string {
     if ($s === null) return '—';
     $s = (int) round($s);
@@ -196,6 +207,15 @@ function hms(?float $s): string {
   .chip.kvar { background:var(--pending); }
   .chip.ingen { background:var(--none); color:var(--muted); }
   .chip.ny { background:#fecaca; color:#7f1d1d; }
+  /* Granskad men inte applicerad är INTE samma sak som klar — egen färg, annars
+     ser raden ut som om allt var gjort. */
+  .chip.klar { background:#fde68a; color:#78350f; }
+  .chip.nytt { background:#e0e7ff; color:#3730a3; }
+  button.kor { font:600 12px system-ui; margin-left:.4rem; padding:1px 8px;
+               border:1px solid var(--line); background:#fff; border-radius:4px;
+               cursor:pointer; }
+  button.kor:hover:not(:disabled) { border-color:var(--muted); }
+  button.kor:disabled { color:var(--muted); cursor:default; }
   .r2 { display:inline-block; background:#e0e7ff; color:#3730a3; border-radius:4px;
         padding:1px 5px; font-size:11px; font-weight:600; margin-left:.3rem; }
   .md { color:var(--muted); font-size:12px; }
@@ -239,7 +259,13 @@ function hms(?float $s): string {
         <?php elseif ($r['kvar'] > 0): ?>
           <span class="chip kvar"><?= $r['flaggor'] ?> flaggor, <?= $r['kvar'] ?> kvar</span>
         <?php else: ?>
-          <span class="chip applicerad"><?= $r['flaggor'] ?> flaggor, granskade</span>
+          <span class="chip klar"><?= $r['flaggor'] ?> flaggor, granskade</span>
+          <button class="kor" data-rel="<?= htmlspecialchars($r['rel']) ?>"
+                  title="Propagera + applicera">Kör steg 4</button>
+        <?php endif; ?>
+        <?php if ($r['stem'] === $jobbKorStem): ?><span class="chip kvar">jobb kör</span><?php endif; ?>
+        <?php if (isset($vantandeForslag[$r['stem']])): ?>
+          <span class="chip nytt" title="fogas in när du öppnar filen">+<?= $vantandeForslag[$r['stem']] ?> propagerade</span>
         <?php endif; ?>
         <?php if ($r['runda'] > 1): ?><span class="r2">runda <?= $r['runda'] ?></span><?php endif; ?>
       </td>
@@ -275,6 +301,27 @@ function filtrera() {
 q.addEventListener('input', filtrera);
 mapp.addEventListener('change', filtrera);
 q.focus();
+
+// --- "Kör steg 4": beställ propagering + applicering för EN rad --------------
+// Jobbet bär sin egen sökväg, så valet i granskningsvyn rörs inte. Rapporten
+// visas i granskningsvyn; här räcker ett kvitto och en omladdning, eftersom
+// statuskolumnen då visar "jobb kör" respektive "+N propagerade".
+for (const b of document.querySelectorAll('button.kor')) {
+  b.addEventListener('click', () => {
+    b.disabled = true;
+    const text = b.textContent;
+    b.textContent = 'beställer…';
+    fetch('jobb.php', {method:'POST', headers:{'Content-Type':'application/json'},
+                       body: JSON.stringify({rel: b.dataset.rel})})
+      .then(r => r.json())
+      .then(res => {
+        if (!res.ok) { b.textContent = text; b.disabled = false; alert(res.error || 'okänt fel'); return; }
+        b.textContent = 'kör…';
+        setTimeout(() => location.reload(), 3000);
+      })
+      .catch(e => { b.textContent = text; b.disabled = false; alert('Nätverksfel: ' + e); });
+  });
+}
 </script>
 </body>
 </html>

@@ -897,6 +897,87 @@ Två följdbeslut som är lätta att missa:
   väljaren en fälla — man granskar fil X, applicerar fil Y och producerar en `.md`
   för fil Z. Alla tre skriver ut vilken fil som träffades och varifrån valet kom.
 
+**Knappen "Propagera + applicera" (`arbetare.py` + `granska/jobb.php`).** När en
+fil är färdiggranskad behövde Lars byta till terminalen för att köra
+`applicera`. Nu finns en knapp — i granskningsvyns panel *Nästa steg* och i
+filväljarens statuskolumn, på de rader som står på "N flaggor, granskade".
+
+**PHP kan inte göra jobbet.** Containern har ingen Python, ser inte
+projektroten, monterar `/data` read-only med flit, och innehåller inte en enda
+`exec()`. Därför två tjänster i `granska/compose.yaml`: `granska` (PHP, läser)
+och `arbetare` (`python:3.12-slim`, utför). De pratar **inte** med varandra —
+beställningen går via `granska/state/jobb.json` — så endera kan vara nere utan
+att den andra bryr sig. Inga pip-installationer behövs: propagering, applicering
+och negationsvakten använder bara standardbiblioteket, och `pydantic`/`anthropic`
+sitter i `forbattra.py` som arbetaren aldrig rör.
+
+**Omfattningen är propagering + applicering, inte mer.** Steg c kostar pengar och
+tar minuter, och negationsvakten kräver en färsk `.md` som bara steg c skriver —
+`batch-forbattra.py` kör den redan automatiskt efter varje fil. En negationsvakt
+direkt efter apply hade jämfört en gammal `.md` mot en ny JSON och larmat på
+skillnader som bara är den uteblivna omkörningen.
+
+**Hittar propageringen nya flaggor appliceras ingenting.** Flaggorna är till för
+att granskas; en apply hade lämnat dem orörda, stämplat filen som applicerad och
+fått `batch-forbattra` att köa den för steg c på text som bär kvar felen.
+Rapporten säger "1 ny flagga från propageringen — inget applicerat" och filen går
+tillbaka till granskningsläge.
+
+**En skrivare per fil — och därför inget lås.** `save.php` skriver *i* sidecaren
+under `flock`; ett rådgivande lås från Python propagerar inte pålitligt över
+Docker Desktops bind-mount från Windows, och ett lås som tyst inte fungerar är
+sämre än inget. Protokollet undviker problemet i stället:
+
+| Fil | Skrivare |
+| --- | --- |
+| `state/<stam>-corrections.json` | **bara PHP** (`save.php`, `index.php`) |
+| `state/<stam>-propagering.json`, `jobb-status.json`, `arbetare.json`, `/data` | **bara arbetaren** |
+| `state/jobb.json` | **bara `jobb.php`** |
+
+Propageringens förslag fogas in av `index.php` vid sidvisningen, under `flock`,
+och **bara på index som saknar flagga och inte täcks av ett frasspan** — samma
+regel propageringen själv följer. Ett beslut Lars redan fattat kan därför aldrig
+skrivas över, hur sent förslaget än kommer. Filen får namnet
+`-propagering-infogad.json` som kvitto, vilket också gör infogningen idempotent.
+
+**Appliceringen skyddas av en innehållsstämpel, inte av ett lås.** `jobb.php`
+lägger sidecarens `sha256` i jobbet; arbetaren vägrar vid avvikelse ("sidecaren
+ändrades efter att du tryckte") och anmärker om den ändras under körningen. Det
+fångar också en halvskriven fil, som inte kan ha rätt hash. Dessutom spärrar
+GUI:t redigering mjukt medan jobbet kör (`JOBB_KOR` i `index.php`).
+
+**Vaktkedjan är batchens, inte enfilsvägens.** `applicera-corrections.py:main()`
+saknar kontroll av ogranskade flaggor och stämplar `corrections_applied_at` ändå
+— arbetaren följer `batch-applicera.py` och vägrar: inga operationer, redan
+applicerad, ogranskade flaggor, märkt "ny transkription behövs". Räkningen
+(`k.antal_ogranskade`) är **strängare** än GUI:ts (tomt `decision` räknas också),
+så arbetaren kan vägra där knappen släppte igenom — rapporten säger då varför.
+
+**Rapporten formateras en gång.** `applicera-corrections.skriv_rapport()` fångas
+med `redirect_stdout` och går både till terminalen (syns i `docker compose up`)
+och till `jobb-status.json`, så panelen och terminalen inte kan säga olika.
+Pollningen har tre tidsgränser så att tystnad blir läsbar: inget svar på 10 s
+("arbetaren svarar inte"), dött hjärtslag under pågående jobb ("verkar ha
+fastnat"), och terminalt läge som visar *Ladda om* eller *Till filväljaren*.
+
+**`VMO_DATA_ROOT`** finns för arbetaren, som ser datamappen på `/data` medan
+`config.toml` bär värdens sökväg. `/data` är en monteringspunkt och ingen
+maskinberoende sökväg — samma konstruktion som `DATA_DIR=/data` redan är för PHP
+— och kedjan `config.toml` → `migrera-corrections.py` → `granska/.env` →
+`${DATA_ROOT}` står orörd. På arbetsstationen byts `config.toml`, inget annat.
+
+**`arbetare.py --en-gang`** kör ett beställt jobb och avslutar. Den byggdes före
+containern, så protokollet gick att pröva för hand — och den är fallbacken om
+Windows-mounten strular: samma jobbfil, kört i värdens venv.
+
+**Verifierat med riktig `php -S` och riktig arbetare** mot en temporär projektrot,
+aldrig mot arkivet: hjärtslaget läses, beställningen skapas, propageringen hittar
+syskonet och stoppar, sidvisningen fogar in det som `pending`. Både knappen i
+panelen (via `current.json`) och knappen i väljaren (explicit `rel`, så valet i
+granskningsvyn inte rörs) provade. Arbetarcontainern mot det riktiga arkivet: ser
+306 transkript, `data.root` blir `/data`, datamappen skrivbar, inga
+pip-installationer.
+
 **Runda 2 (frivillig): kontextgranskning med Claude Fable.** Subtila fel
 överlever runda 1 — riktiga ord fel i sammanhanget ("få *råd* av Gud" → nåd,
 "ditt eget *innehåll*" → inre), bortfallna ord (negationer, namnattributioner;

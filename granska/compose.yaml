@@ -1,6 +1,12 @@
-# Läsvyn (steg 1a). Kör från granska/:
+# Granska-GUI:t och dess arbetare. Kör från granska/:
 #     docker compose up
 # Öppna sedan http://localhost:8137
+#
+# Två tjänster: `granska` (PHP, läser och visar) och `arbetare` (Python, utför
+# propagering och applicering när knappen i granskningsvyn beställer det). De
+# pratar inte med varandra — beställningen går via en fil i state/ — så endera
+# kan vara nere utan att den andra bryr sig. Ändrar du arbetare.py: starta om
+# tjänsten, den laddar koden vid start.
 # (8080 är upptagen av webbteknik.nu på den här maskinen; 8137 är ledig.)
 #
 # DATA_ROOT (var ljud/JSON ligger) läses ur .env i den här mappen. Den genereras
@@ -18,3 +24,33 @@ services:
     volumes:
       - ./:/app
       - "${DATA_ROOT:?saknas — kör 'python migrera-corrections.py' som skriver granska/.env}:/data:ro"
+
+  # Arbetaren utför det GUI:t inte kan: propagering och applicering. PHP-tjänsten
+  # ovan har ingen Python och ser datamappen read-only med flit — den här ser
+  # koden read-only och datamappen skrivbar. Beställningen går via en fil i
+  # state/, så de två containrarna aldrig behöver prata med varandra: endera kan
+  # vara nere utan att den andra bryr sig.
+  arbetare:
+    image: python:3.12-slim
+    working_dir: /app
+    command: python arbetare.py --poll=2
+    environment:
+      # /data är monteringspunkten här inne, inte en maskinsökväg. Värdens rot
+      # kommer ur config.toml via granska/.env precis som för granska-tjänsten;
+      # load_config() läser VMO_DATA_ROOT och låter den gå före.
+      - VMO_DATA_ROOT=/data
+      - PYTHONUNBUFFERED=1          # annars syns rapporten inte live i compose up
+      - PYTHONDONTWRITEBYTECODE=1   # /app är read-only
+      # Utan den stämplar applicera_en() corrections_applied_at i UTC, och
+      # arbetarens tider skulle ligga fel mot dem Lars gjort från värden.
+      - TZ=Europe/Stockholm
+    volumes:
+      # Projektroten, för skripten. Read-only: arbetaren ska köra koden, inte
+      # kunna ändra den.
+      - ../:/app:ro
+      # Enda skrivbara stället i projektet: jobbfil, status, hjärtslag, förslag.
+      - ./state:/app/granska/state
+      # Skrivbar HÄR (apply skriver .json/.srt/.txt/-bak.json) men fortsatt
+      # read-only för granska-tjänsten ovan — ljudet skyddas från PHP-sidan.
+      - "${DATA_ROOT:?saknas — kör 'python migrera-corrections.py' som skriver granska/.env}:/data"
+    restart: unless-stopped

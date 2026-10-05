@@ -116,7 +116,34 @@ Väljaren listar alla filer, senaste överst. Klicka en → rätta med `n` (näs
 Duger transkriptionen inte alls — t.ex. memo på engelska — tryck **Märk: ny
 transkription behövs** i sidopanelen.
 
-### 3b. Låt rättelserna hitta sina syskon (frivilligt)
+### 3b. Kör nästa steg direkt i GUI:t
+
+Står en fil på **"N flaggor, granskade"** finns en knapp — i filväljarens
+statuskolumn (*Kör steg 4*) och i granskningsvyns panel *Nästa steg*. Den
+propagerar och applicerar utan att du byter till terminalen.
+
+```bash
+cd granska && docker compose up     # startar BÅDA tjänsterna: GUI + arbetare
+```
+
+Knappen kräver att tjänsten `arbetare` är uppe — PHP kan inte köra Python.
+Är den nere säger panelen det inom tio sekunder i stället för att tiga.
+
+**Hittar propageringen nya flaggor appliceras ingenting.** Du får "1 ny flagga
+från propageringen — inget applicerat", flaggan fogas in när du laddar om, och du
+avgör den innan du trycker igen. Rapporten visas i panelen och är samma text som
+`docker compose up` skriver i terminalen.
+
+**Steg c ingår inte** — det kostar pengar och tar minuter. Kör `forbattra`
+efteråt; negationsvakten följer med där.
+
+Fungerar inte containern går samma jobb att köra för hand:
+
+```bash
+"$PY" "$VMO/arbetare.py" --en-gang
+```
+
+### 3c. Låt rättelserna hitta sina syskon (frivilligt)
 
 ```bash
 propagera --dry-run     # visa förslagen
@@ -282,6 +309,7 @@ en medveten ändring går inte att skilja från en bugg.
 | jag har bytt namn på eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
 | ta bort ett memo jag är helt klar med | `radera STAM` visar, `radera STAM --kor` gör det |
 | byta namn på ett memo | `bytnamn GAMMALT NYTT` — ger allt nya namn och lagar varje pekare |
+| köra steg 4 utan att lämna GUI:t | knappen *Kör steg 4* i väljaren, eller panelen *Nästa steg* |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |
 | köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `"$PY" "$VMO/transkribera.py"` |
@@ -498,7 +526,8 @@ Använder du `batch-flagga.py` är sidecarerna redan skrivna. Kör du enstaka fi
 
 **Filväljaren är ingången.** `valj.php` listar **alla** transkriptioner i datamappen,
 senaste överst, med filter på temamapp och filnamn. Statuskolumnen visar var varje
-fil står: `ej flaggad` · `inga fel funna` · `X flaggor, Y kvar` · `applicerad` ·
+fil står: `ej flaggad` · `inga fel funna` · `X flaggor, Y kvar` · `X flaggor, granskade`
+(med knappen *Kör steg 4*) · `jobb kör` · `+N propagerade` · `applicerad` ·
 `runda 2` · `⚠ ny transkription behövs`.
 
 **Filer utan sidecar går att öppna ändå** — de får en tom arbetskopia, och du rättar
