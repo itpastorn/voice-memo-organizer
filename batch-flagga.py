@@ -21,32 +21,18 @@ Idempotent: filer som redan har -corrections.txt eller -corrections.json hoppas
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from pathlib import Path
 
 import korrigeringar as k
 
-PROJECT_ROOT = Path(__file__).resolve().parent
 
 # Priser per miljon tokens för corrections.llm_modell (claude-opus-4-8).
 PRIS_IN, PRIS_UT = 5.0, 25.0
 
 
-def ladda(namn: str):
-    """Ladda en modul vars filnamn innehåller bindestreck. `import flagga-llm`
-    går inte; filnamnen följer projektets namnkonvention och byts inte för
-    Pythons skull."""
-    spec = importlib.util.spec_from_file_location(
-        namn.replace("-", "_"), PROJECT_ROOT / f"{namn}.py")
-    mod = importlib.util.module_from_spec(spec)
-    # Måste ligga i sys.modules FÖRE exec_module: Pydantic slår upp modulen för
-    # att lösa typerna i Resultat/Flaggning, och kastar annars
-    # "is not fully defined" när schemat ska användas.
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
+ladda = k.ladda          # delad byggsten, se korrigeringar.py
 
 
 fl = ladda("flagga-llm")

@@ -24,7 +24,6 @@ Se CLAUDE.md.
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -34,19 +33,9 @@ import korrigeringar as k
 LOGGFIL = k.PROJECT_ROOT / "logs" / "arkivlogg.log"
 
 
-HAR = Path(__file__).resolve().parent
 
 
-def ladda(namn: str):
-    """Ladda en modul vars filnamn innehåller bindestreck. Syskonmodulen söks
-    utifrån den här filens egen plats, inte ur konfigurationen — den ligger
-    bredvid oss per definition."""
-    spec = importlib.util.spec_from_file_location(
-        namn.replace("-", "_"), HAR / f"{namn}.py")
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
+ladda = k.ladda          # delad byggsten, se korrigeringar.py
 
 
 sn = ladda("synka-namn")

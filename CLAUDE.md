@@ -108,6 +108,7 @@ Konkret:
 - Skriv inget som *bara* fungerar på CPU (t.ex. antaganden om att allt får plats i
   RAM, eller sekventiell bearbetning som förutsätter att GPU-parallellism aldrig
   blir aktuell).
+  **En teologisk aspekt** Lars är teolog och kristen och ogillar att orden "dop" eller "döpa" används för att byta namn på saker. Undvik begreppen "döpa till" och "döpa om". Använd i stället "ge namn"/"kalla" eller "byta namn"/"ändra namn". Detta gäller filnamn, 
 
 ## Datamapp
 

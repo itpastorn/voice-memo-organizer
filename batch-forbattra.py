@@ -25,7 +25,6 @@ Se CLAUDE.md steg c.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import sys
@@ -33,7 +32,6 @@ from pathlib import Path
 
 import korrigeringar as k
 
-PROJECT_ROOT = Path(__file__).resolve().parent
 
 # Uppmätt 2026-08-13 på claude-opus-4-8:
 #   - 2,13 tecken per token på promptens svenska text (mätt med count_tokens över
@@ -49,14 +47,7 @@ SCHEMA_OVERHEAD = 766
 UT_PER_IN = 0.355
 
 
-def ladda(namn: str):
-    """Ladda en modul vars filnamn innehåller bindestreck."""
-    spec = importlib.util.spec_from_file_location(
-        namn.replace("-", "_"), PROJECT_ROOT / f"{namn}.py")
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
+ladda = k.ladda          # delad byggsten, se korrigeringar.py
 
 
 fb = ladda("forbattra")

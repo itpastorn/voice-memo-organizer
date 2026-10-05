@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import importlib.util
 import json
+import os
 import re
 import sys
 import tomllib
@@ -28,7 +30,37 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 def load_config() -> dict:
     with open(PROJECT_ROOT / "config.toml", "rb") as f:
-        return tomllib.load(f)
+        cfg = tomllib.load(f)
+    # VMO_DATA_ROOT finns för arbetarcontainern, som ser datamappen på /data
+    # medan config.toml bär värdens sökväg. '/data' är en MONTERINGSPUNKT och
+    # ingen maskinberoende sökväg — samma konstruktion som DATA_DIR=/data redan
+    # är för PHP-tjänsten. Kedjan till värdens rot står orörd: config.toml ->
+    # migrera-corrections.py -> granska/.env -> ${DATA_ROOT} i compose.yaml. På
+    # arbetsstationen byts config.toml och ingenting annat.
+    rot = os.environ.get("VMO_DATA_ROOT")
+    if rot:
+        cfg["data"]["root"] = rot
+    return cfg
+
+
+def ladda(namn: str):
+    """Ladda en modul vars filnamn innehåller bindestreck. `import
+    applicera-corrections` går inte; filnamnen följer projektets namnkonvention
+    och byts inte för Pythons skull.
+
+    Modulen söks utifrån den här filens egen plats och inte via PROJECT_ROOT:
+    var koden ligger är ingen inställning, och ett prov som pekar om datamappen
+    ska inte råka peka om importerna."""
+    spec = importlib.util.spec_from_file_location(
+        namn.replace("-", "_"),
+        Path(__file__).resolve().parent / f"{namn}.py")
+    mod = importlib.util.module_from_spec(spec)
+    # Måste ligga i sys.modules FÖRE exec_module: Pydantic slår upp modulen för
+    # att lösa typerna i flagga-llm:s Resultat/Flaggning, och kastar annars
+    # "is not fully defined" när schemat ska användas.
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def normalize_stem(stem: str) -> str:

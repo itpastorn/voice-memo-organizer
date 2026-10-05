@@ -25,7 +25,6 @@ Idempotent: en applicerad fil hoppas över nästa gång. Se CLAUDE.md steg b.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from collections import Counter, defaultdict
@@ -33,19 +32,9 @@ from pathlib import Path
 
 import korrigeringar as k
 
-PROJECT_ROOT = Path(__file__).resolve().parent
 
 
-def ladda(namn: str):
-    """Ladda en modul vars filnamn innehåller bindestreck. `import
-    applicera-corrections` går inte; filnamnen följer projektets namnkonvention
-    och byts inte för Pythons skull."""
-    spec = importlib.util.spec_from_file_location(
-        namn.replace("-", "_"), PROJECT_ROOT / f"{namn}.py")
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
+ladda = k.ladda          # delad byggsten, se korrigeringar.py
 
 
 ap = ladda("applicera-corrections")
