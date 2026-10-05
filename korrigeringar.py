@@ -156,6 +156,39 @@ def iter_transkript(root: Path):
         yield p
 
 
+def hor_till_stam(p: Path, stam: str) -> bool:
+    """Hör filen till memot? Ljudet matchas på stammen, allt annat på det
+    härledda suffixet — så `zego-x-2.json` inte dras med av `zego-x`."""
+    if p.suffix.lower() in LJUDANDELSER:
+        return p.stem == stam
+    return stam_av(p.name) == stam
+
+
+def familj_i(mapp: Path, stam: str) -> list[Path]:
+    """Memots filer i en mapp — ljudet och allt härlett."""
+    return sorted(p for p in mapp.iterdir() if p.is_file() and hor_till_stam(p, stam))
+
+
+def hitta_memo(root: Path, stam: str) -> tuple[Path | None, list[Path]]:
+    """(mappen memot ligger i, dess filer). Ligger stammen i fler än en mapp
+    returneras (None, alla träffar) — en stam ska vara unik i hela arkivet,
+    eftersom `granska/state/` är platt. Se namnvakten."""
+    traffar: dict[Path, list[Path]] = {}
+    for p in root.rglob("*"):
+        if not p.is_file():
+            continue
+        if set(p.relative_to(root).parts) & EXCLUDE_DIRS:
+            continue
+        if hor_till_stam(p, stam):
+            traffar.setdefault(p.parent, []).append(p)
+    if not traffar:
+        return None, []
+    if len(traffar) > 1:
+        return None, sorted(q for lista in traffar.values() for q in lista)
+    mapp, filer = next(iter(traffar.items()))
+    return mapp, sorted(filer)
+
+
 def valj_sidecar(json_path: Path) -> tuple[Path | None, int, str]:
     """Sidecarn för ett transkript: (sökväg, runda, varifrån den kom).
 

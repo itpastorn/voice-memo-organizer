@@ -21,8 +21,8 @@ vmohjalp                 # listar kommandona
 ```
 
 Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
-`tokenvakt`, `trvakt`, `sortera`, `synka`, `radera`, `propagera`, `applicera`,
-`forbattra` och `vmo`. Alla tar samma flaggor som skripten
+`tokenvakt`, `trvakt`, `sortera`, `synka`, `dopom`, `radera`, `propagera`,
+`applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
 fungerar när du vill åt något som inte har en genväg.
@@ -208,7 +208,34 @@ Säg **"den här inspelningen handlar om ..."** i memots första halvminut, så
 avgörs saken direkt oavsett nyckelord. Det är disciplinen som gör sorteringen
 tillförlitlig över tid; reglerna behöver inte vara perfekta från början.
 
-### 7. Radera ett memo du är klar med
+### 7. Byta namn på ett memo
+
+```bash
+dopom zego-gammalt zego-nytt              # gör det direkt
+dopom zego-gammalt zego-nytt --dry-run    # visa planen först
+```
+
+**Här är `--dry-run` inte standard**, till skillnad från `synka` och `radera`:
+ingenting går förlorat av ett namnbyte, och kontrollen sker ändå innan första
+filen rörs. Blir namnet fel kör du bara en gång till.
+
+Namnet normaliseras enligt File Naming Convention, och skriptet skriver ut vad
+det blev (`"zego Nytt Ämne!"` → `zego-nytt-amne`). Det som döps om och lagas:
+ljudet, `.json`, `-bak*.json`, `.srt`, `.txt`, `.md`, `-corrections*`,
+`-borttaget.txt`, arbetskopian i `granska/state/` — plus **varje pekare inuti
+filerna**: `audio_file`, `transcript_json`, `base_json`, `.md`:ns frontmatter,
+rubrikstycket i `-borttaget.txt`, `granska/status.json` och
+`granska/current.json`.
+
+**Kollisionen kontrolleras i hela arkivet**, inte bara i mappen — `granska/state/`
+är platt, så två memon med samma stam skulle få sina sidecars att skriva över
+varandra. Är namnet upptaget avbryter skriptet utan att röra något.
+
+Det här är `synka --kor` baklänges: `synka` lagar i efterhand när du döpt om
+ljudet för hand, `dopom` gör bytet och lagningen i ett svep så att arkivet
+aldrig är inkonsekvent däremellan. Maskineriet är samma kod.
+
+### 7b. Radera ett memo du är klar med
 
 Minnesanteckningar man är färdig med ska kunna lämna systemet helt.
 
@@ -241,9 +268,9 @@ spöken i filväljaren: arbetskopian i `granska/state/`, märkningen i
 viktigast — `state/` slås upp på bara stammen, så en framtida inspelning med
 samma namn skulle ärva de gamla besluten.
 
-Varje radering skriver en rad i **`logs/raderat.log`** (versionerad, till
-skillnad från mätloggarna). Utan den krymper arkivet tyst och en medveten
-radering går inte att skilja från en bugg.
+Varje radering och varje namnbyte skriver en rad i **`logs/arkivlogg.log`**
+(versionerad, till skillnad från mätloggarna). Utan den ändras arkivet tyst och
+en medveten ändring går inte att skilja från en bugg.
 
 | Vill du... | Gör så |
 | --- | --- |
@@ -254,6 +281,7 @@ radering går inte att skilja från en bugg.
 | få ett memo ur `incoming/` till rätt temamapp | `sortera` föreslår numrerat, `sortera --flytta N` genomför |
 | jag har döpt om eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
 | ta bort ett memo jag är helt klar med | `radera STAM` visar, `radera STAM --kor` gör det |
+| byta namn på ett memo | `dopom GAMMALT NYTT` — döper om allt och lagar varje pekare |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |
 | köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `"$PY" "$VMO/transkribera.py"` |

@@ -235,6 +235,46 @@ Flytten tar hela familjen — ljud, transkript och allt härlett — i ett svep,
 vägrar när ett målnamn redan finns. Arbetskopian i `granska/state/` är platt och
 behöver inte flyttas.
 
+### Namnbyte (`dop-om.py`)
+
+`dop-om.py <gammal-stam> <ny-stam>` döper om memot och lagar allt som pekar på
+det, i ett svep.
+
+**Det här är `synka-namn.py` baklänges, och delar dess kod.** Där lagar skriptet
+i efterhand det som blev föräldralöst när Lars döpt om ljudet för hand; här sker
+bytet och lagningen tillsammans, så fönstret där arkivet är inkonsekvent aldrig
+uppstår. `Omdopning`, `kontrollera`, `genomfor`, `planera_falt`, `tillampa_falt`
+och `synka_gui` lånas som de är — en andra uppsättning regler hade kunnat hamna
+i otakt med den första, och de tre reglerna synka-namn lärde sig den hårda vägen
+(suffixet härleds aldrig om, spärrade filer rörs inte, maskinsatt `titel` följer
+stammen) gäller lika mycket här. `planera_falt` tog därför en valfri lista med
+transkript, så ett namnbyte inte behöver läsa om hela arkivet.
+
+**`--dry-run` är INTE standard här**, till skillnad från `synka-namn.py` och
+`radera.py`. Skälet är asymmetrin: de två kan förstöra något oåterkalleligt,
+ett namnbyte kan inte. Kontrollen sker ändå innan första filen rörs, och blir
+namnet fel är åtgärden att köra en gång till.
+
+**Kollisionen kontrolleras i hela arkivet.** Stammar måste vara unika överallt
+eftersom `granska/state/` är platt — se namnvakten. Dessutom avvisas: samma namn
+som förut, en gammal stam som finns i mer än en mapp, och **en stam med två
+ljudfiler** (namnvaktens spärrfall — `ljud_for()` kan inte avgöra vilken
+inspelning texten kommer ur, så pekarfälten går inte att göra konsekventa).
+
+Nya namnet normaliseras enligt File Naming Convention och skriptet skriver ut
+vad det blev, så ett `"zego Nytt Ämne!"` som blir `zego-nytt-amne` syns direkt.
+
+**Verifierat mot ett låtsasarkiv:** 8 filer omdöpta, **10 pekarfält** lagade
+(`audio_file` i `.json` och `-bak.json`, sidecarens tre fält, `.md`:ns tre
+frontmatter-nycklar, två omnämnanden i `-borttaget.txt`:s rubrikstycke) plus
+`current.json` och `status.json`. Åtta vägransvägar ger exit 2 med arkivet orört
+och ingen loggrad.
+
+**Mätt på vägen, mot förväntan:** sidecarens `transcript_json` såg ut att tappa
+mappdelen (`tema/zego-x.json` → `zego-nytt.json`). Alla 83 riktiga sidecars
+lagrar **bara filnamn**, så `byt_stam` är rätt och testfixturen var
+orealistisk. Ingen bugg — men leta inte efter den igen.
+
 ### Radering (`radera.py`)
 
 Memon som bara var minnesanteckningar ska kunna lämna systemet helt — ljud,
@@ -264,7 +304,10 @@ JSON:en (15 filer har en sådan).
 | `granska/status.json` | uppslagningen faller tillbaka på filnamnet, så en kvarglömd "ny transkription behövs" kan återuppstå på en ny fil med samma namn |
 | `granska/current.json` | pekar den på en raderad fil faller `aktuell`, `applicera`, `forbattra` och `negationsvakt` tillbaka på `data.test_file` — alltså fel memo, tyst |
 
-**Varje radering loggas i `logs/raderat.log`, och den filen är versionerad.**
+**Varje radering och varje namnbyte loggas i `logs/arkivlogg.log`, och den
+filen är versionerad.** Loggen bär ett `handelse=`-fält (`radering` eller
+`namnbyte`) och är gemensam med flit: det är arkivets logg över medvetna
+ändringar, inte en logg per skript.
 `.gitignore` utesluter `logs/*` och undantar just den — katalogen måste
 uteslutas med `logs/*` och inte `logs/`, annars stiger git aldrig ner i den och
 undantaget får ingen verkan. Skälet att logga: den 1 oktober frågade Lars om han
@@ -1288,11 +1331,20 @@ Skriptet självt, kodboken och databasen bor i detta projekt
 
 - **Svenska.** Lars arbetar på svenska. Kod och kommentarer likaså, om inget annat
   sägs.
-- **Rör aldrig originalljudet.** Regeln gäller ljud*innehållet*: ingen omdöpning,
-  ingen omkodning, ingen radering. Allt annat är återskapbart; ljudet är det inte.
-  **Enda undantaget är metadatataggar (steg f)** — ljudströmmen kopieras då bit
-  för bit, skrivningen sker via tempfil + atomiskt byte, och strömmen verifieras
-  oförändrad efteråt. Ingen annan skrivning i ljudfilen är tillåten.
+- **Rör aldrig originalljudet.** Regeln gäller ljud*innehållet*: ingen omkodning,
+  ingen radering, ingen omdöpning på eget initiativ. Allt annat är återskapbart;
+  ljudet är det inte. Tre undantag, alla snäva:
+  - **Metadatataggar (steg f).** Ljudströmmen kopieras bit för bit, skrivningen
+    sker via tempfil + atomiskt byte, och strömmen verifieras oförändrad
+    efteråt. Ingen annan skrivning *i* ljudfilen är tillåten.
+  - **`dop-om.py`**, när Lars pekar ut memot. Ett namnbyte rör inte en byte av
+    ljudet — det är en katalogpost — och alternativet (Lars döper om för hand,
+    `synka-namn.py` lagar efteråt) lämnar arkivet inkonsekvent däremellan.
+  - **`radera.py`**, när Lars pekar ut memot. Minnesanteckningar man är klar med
+    ska kunna lämna systemet; se Radering.
+
+  Det gemensamma för de två sista: **aldrig på eget initiativ, aldrig som ett
+  svep.** En stam i taget, utpekad för hand.
 - **`test/` och `sammanfatta/` är utanför projektet.**
 - Whisper-JSON:en är sanningskällan. Bygg allt annat som derivat, och se till att
   det går att bygga om.

@@ -327,12 +327,15 @@ def byt_stam(varde: str, ratt_stam: str) -> str | None:
     return None
 
 
-def planera_falt(root: Path) -> list[Faltfix]:
+def planera_falt(root: Path, transkript=None) -> list[Faltfix]:
     """Pekarfält som inte stämmer med disk. Körs EFTER omdöpningarna, så den
-    ser de nya namnen och behöver inte simulera dem."""
+    ser de nya namnen och behöver inte simulera dem.
+
+    `transkript` begränsar svepet till utpekade filer — `dop-om.py` lagar ett
+    enda memo och ska inte läsa om hela arkivet för att göra det."""
     cfg = k.load_config()
     fixar: list[Faltfix] = []
-    for json_path in sorted(k.iter_transkript(root)):
+    for json_path in sorted(k.iter_transkript(root) if transkript is None else transkript):
         # Spärrade filer rörs inte. Namnvakten är den som avgör vad som är
         # tvetydigt, och en fil vars stam har två ljudfiler går inte att laga
         # utan att först välja vilken inspelning som gäller — Lars beslut.

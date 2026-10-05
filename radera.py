@@ -34,48 +34,13 @@ from pathlib import Path
 
 import korrigeringar as k
 
-LOGGFIL = k.PROJECT_ROOT / "logs" / "raderat.log"
+LOGGFIL = k.PROJECT_ROOT / "logs" / "arkivlogg.log"
 BEHALL_SUFFIX = (".md", "-borttaget.txt")
 
 
 # --------------------------------------------------------------------------- #
 # Hitta memot
 # --------------------------------------------------------------------------- #
-
-def hor_till(p: Path, stam: str) -> bool:
-    """Hör filen till memot? Ljudet matchas på stammen, allt annat på det
-    härledda suffixet — så `zego-x-2.json` inte dras med av `zego-x`."""
-    if p.suffix.lower() in k.LJUDANDELSER:
-        return p.stem == stam
-    return k.stam_av(p.name) == stam
-
-
-def familj_i(mapp: Path, stam: str) -> list[Path]:
-    """Memots filer i en mapp."""
-    return sorted(p for p in mapp.iterdir() if p.is_file() and hor_till(p, stam))
-
-
-def hitta_mapp(root: Path, stam: str) -> tuple[Path | None, list[Path]]:
-    """Mappen memot ligger i, och alla filer som hör till stammen.
-
-    Letar i hela arkivet: en stam ska vara unik överallt (`granska/state/` är
-    platt — se namnvakten), så fler än en mapp är ett fall skriptet vägrar.
-    """
-    traffar: dict[Path, list[Path]] = {}
-    for p in root.rglob("*"):
-        if not p.is_file():
-            continue
-        if set(p.relative_to(root).parts) & k.EXCLUDE_DIRS:
-            continue
-        if hor_till(p, stam):
-            traffar.setdefault(p.parent, []).append(p)
-    if not traffar:
-        return None, []
-    if len(traffar) > 1:
-        return None, [q for lista in traffar.values() for q in lista]
-    mapp, filer = next(iter(traffar.items()))
-    return mapp, sorted(filer)
-
 
 def ljudlangd(p: Path) -> float | None:
     try:
@@ -221,10 +186,11 @@ def stada_gui(cfg: dict, stam: str, json_path: Path, kor: bool) -> list[str]:
 
 
 def logga(mapp: Path, stam: str, root: Path, rad: dict) -> None:
-    """En rad per radering. Utan den krymper arkivet tyst, och en medveten
-    radering går inte att skilja från en bugg."""
+    """En rad per radering, i den gemensamma arkivloggen. Utan den krymper
+    arkivet tyst, och en medveten radering går inte att skilja från en bugg."""
     LOGGFIL.parent.mkdir(parents=True, exist_ok=True)
     delar = [datetime.now().isoformat(timespec="seconds"),
+             "handelse=radering",
              f"stam={stam}",
              f"mapp={mapp.relative_to(root).as_posix()}"]
     delar += [f"{n}={v}" for n, v in rad.items()]
@@ -265,7 +231,7 @@ def main() -> int:
     root = Path(cfg["data"]["root"])
     stam = k.normalize_stem(fria[0].removesuffix(".json"))
 
-    mapp, filer = hitta_mapp(root, stam)
+    mapp, filer = k.hitta_memo(root, stam)
     if mapp is None and not filer:
         print(f"FEL: hittar inget som heter {stam!r} i arkivet.", file=sys.stderr)
         return 2
@@ -345,7 +311,7 @@ def main() -> int:
     # memots egen mapp. Letar man i hela arkivet räknas filer som --till just
     # flyttat till en annan mapp som kvarglömda.
     behallna_namn = {q.name for q in behall}
-    kvar = [q for q in familj_i(mapp, stam) if q.name not in behallna_namn]
+    kvar = [q for q in k.familj_i(mapp, stam) if q.name not in behallna_namn]
     if kvar:
         misslyckade += [f"kvar: {q.name}" for q in kvar]
 
