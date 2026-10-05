@@ -50,6 +50,53 @@ if (!is_file($workPath)) {
     }
 }
 
+// --- Propageringsförslag från arbetaren ------------------------------------
+// arbetare.py skriver ALDRIG i arbetskopian: PHP är enda skrivaren där, och ett
+// rådgivande lås mellan en PHP-container och en Python-container på en
+// Windows-bind-mount är inte att lita på. Arbetaren lämnar sina förslag i en
+// egen fil, och vi fogar in dem här — bara på index som saknar flagga och inte
+// täcks av ett frasspan. Då kan ett beslut Lars redan fattat aldrig skrivas
+// över, hur sent förslaget än kommer.
+require_once __DIR__ . '/gemensam.php';
+$propagerat = 0;
+$propFil = $stateDir . '/' . ($cur['stem'] ?? '') . '-propagering.json';
+if (($cur['stem'] ?? '') !== '' && is_file($propFil)) {
+    $forslag = json_decode(file_get_contents($propFil), true);
+    $nya = is_array($forslag) ? ($forslag['flaggor'] ?? []) : [];
+    $fp = @fopen($workPath, 'c+');
+    if ($fp && flock($fp, LOCK_EX)) {
+        $s = json_decode(stream_get_contents($fp), true);
+        if (is_array($s)) {
+            $s['flags'] = $s['flags'] ?? [];
+            $tackta = fras_tackta($s);
+            $upptagna = [];
+            foreach ($s['flags'] as $f) {
+                if (isset($f['global_index'])) $upptagna[$f['global_index']] = true;
+            }
+            foreach ($nya as $f) {
+                $gi = $f['global_index'] ?? null;
+                // $tackta är en nyckelkarta (index => true), som i rakna_beslut().
+                if ($gi === null || isset($upptagna[$gi]) || isset($tackta[$gi])) continue;
+                unset($f['_poang']);        // arbetarens egen poäng, inte sidecarens sak
+                $s['flags'][] = $f;
+                $upptagna[$gi] = true;
+                $propagerat++;
+            }
+            if ($propagerat > 0) {
+                usort($s['flags'], fn($a, $b) => ($a['global_index'] ?? 0) <=> ($b['global_index'] ?? 0));
+                ftruncate($fp, 0); rewind($fp);
+                fwrite($fp, json_encode($s, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+                fflush($fp);
+            }
+        }
+        flock($fp, LOCK_UN);
+    }
+    if ($fp) fclose($fp);
+    // Döpt till -infogad: kvitto på vad som hände, och förslagen fogas inte in
+    // två gånger. Raderas inte — den säger vad arbetaren föreslog.
+    @rename($propFil, $stateDir . '/' . $cur['stem'] . '-propagering-infogad.json');
+}
+
 $data = json_decode(file_get_contents($tjPath), true);
 $side = json_decode(file_get_contents($workPath), true);
 if (!$data || !$side) fail("JSON går inte att tolka.");
@@ -213,6 +260,9 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   .var { color:var(--muted); font-size:13px; }
   .varning { background:#fecaca; border:1px solid var(--delete-b); color:#7f1d1d;
              border-radius:5px; padding:2px 9px; font-size:13px; font-weight:600; }
+  /* Propagerade flaggor är inget fel — de är nytt arbete. Egen färg, inte röd. */
+  .nytt { background:#e0e7ff; border:1px solid #6366f1; color:#3730a3;
+          border-radius:5px; padding:2px 9px; font-size:13px; font-weight:600; }
   #statusBtn { font:600 13px system-ui; padding:.4rem .6rem; border:1px solid var(--line);
                background:#fff; border-radius:6px; cursor:pointer; width:100%; }
   #statusBtn:hover { border-color:var(--muted); }
@@ -230,6 +280,9 @@ $decided = $decCount['replace'] + $decCount['delete'] + $decCount['accept'];
   <?php if ($filStatus): ?>
     <span class="varning" id="varning">⚠ Ny transkription behövs<?=
       $filStatus['note'] ? ' — ' . htmlspecialchars($filStatus['note']) : '' ?></span>
+  <?php endif; ?>
+  <?php if ($propagerat > 0): ?>
+    <span class="nytt">+<?= $propagerat ?> propagerade <?= $propagerat === 1 ? 'flagga' : 'flaggor' ?> att avgöra</span>
   <?php endif; ?>
   <?php if ($indexVarning !== ''): ?>
     <span class="varning">⚠ <?= htmlspecialchars($indexVarning) ?></span>
