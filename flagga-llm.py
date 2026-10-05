@@ -128,7 +128,7 @@ def main() -> int:
         print(f"FEL: {out_path.name} finns redan.", file=sys.stderr)
         print("Vägrar skriva över — den kan innehålla dina handredigeringar.",
               file=sys.stderr)
-        print("Ta bort eller döp om filen och kör igen.", file=sys.stderr)
+        print("Ta bort eller byt namn filen och kör igen.", file=sys.stderr)
         return 1
 
     data = json.loads(json_path.read_text(encoding="utf-8"))

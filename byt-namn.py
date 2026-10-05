@@ -1,7 +1,7 @@
 """Döp om ett memo — ljud, transkript, allt härlett och varje pekare.
 
-    dop-om.py <gammal-stam> <ny-stam>              gör det
-    dop-om.py <gammal-stam> <ny-stam> --dry-run    visa planen först
+    byt-namn.py <gammal-stam> <ny-stam>              gör det
+    byt-namn.py <gammal-stam> <ny-stam> --dry-run    visa planen först
 
 Till skillnad från `radera.py` och `synka-namn.py` är **`--dry-run` inte
 standard**: ingenting går förlorat av ett namnbyte, och kontrollen sker ändå
@@ -9,9 +9,9 @@ innan första filen rörs. Blir namnet ändå fel är åtgärden att köra skrip
 gång till med rätt namn.
 
 **Det här är `synka-namn.py` baklänges.** Där lagar skriptet i efterhand det som
-blev föräldralöst när Lars döpt om ljudet för hand; här sker bytet och
+blev föräldralöst när Lars bytt namn på ljudet för hand; här sker bytet och
 lagningen i ett svep, så fönstret där arkivet är inkonsekvent aldrig uppstår.
-Maskineriet är därför synka-namns — `Omdopning`, `kontrollera`, `genomfor`,
+Maskineriet är därför synka-namns — `Namnbyte`, `kontrollera`, `genomfor`,
 `planera_falt`, `tillampa_falt`, `synka_gui` — och inte en andra uppsättning
 regler som kan hamna i otakt med den första.
 
@@ -60,7 +60,7 @@ def main() -> int:
         return 2
     fria = [a for a in args if not a.startswith("--")]
     if len(fria) != 2:
-        print("Anrop:  dop-om.py <gammal-stam> <ny-stam> [--dry-run]",
+        print("Anrop:  byt-namn.py <gammal-stam> <ny-stam> [--dry-run]",
               file=sys.stderr)
         return 2
 
@@ -114,7 +114,7 @@ def main() -> int:
         return 2
 
     state_filer = sorted(sn.STATE_DIR.glob(f"{gammal}-corrections*.json"))
-    plan = sn.Omdopning(gammal_mapp=mapp, gammal_stam=gammal, ny_mapp=mapp,
+    plan = sn.Namnbyte(gammal_mapp=mapp, gammal_stam=gammal, ny_mapp=mapp,
                         ny_stam=ny, filer=filer, bevis="utpekat för hand",
                         state_filer=state_filer)
 
@@ -141,9 +141,9 @@ def main() -> int:
 
     gjorda = sn.genomfor(plan)
     print()
-    print(f"{len(gjorda)} filer omdöpta.")
+    print(f"{len(gjorda)} filer namnändrade.")
 
-    # Pekarfälten lagas EFTER omdöpningen, med synka-namns egna regler: bara
+    # Pekarfälten lagas EFTER namnbytet, med synka-namns egna regler: bara
     # stammen byts, suffixet härleds aldrig om. Svepet scopas till det här
     # memot — hela arkivet behöver inte läsas om för ett namnbyte.
     ny_json = mapp / f"{ny}.json"

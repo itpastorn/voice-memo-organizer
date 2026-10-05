@@ -158,7 +158,7 @@ def main() -> int:
         logger.info("  %d. %s%s", i, p.relative_to(root).as_posix(), not_)
     if sparrade:
         logger.warning("%d fil(er) spärrade av namnvakten — kör namnvakt.py för "
-                       "att se varför och vad som ska döpas om.", sparrade)
+                       "att se varför och vad som ska byta namn.", sparrade)
     if dry_run:
         logger.info("--dry-run: ingen transkribering körd.")
         return 0

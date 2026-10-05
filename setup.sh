@@ -7,7 +7,7 @@
 #     source setup.sh          (eller: . setup.sh)
 #
 # Ger: harmapp, batch, flagga, granska, aktuell, namnvakt, tokenvakt, trvakt,
-# sortera, synka, dopom, propagera, applicera, forbattra, radera, vmo.
+# sortera, synka, bytnamn, propagera, applicera, forbattra, radera, vmo.
 # Kör `vmohjalp` för listan med förklaringar.
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
@@ -39,9 +39,9 @@ else
     tokenvakt() { "$PY" "$VMO/tokenvakt.py"          "$@"; }   # specialtoken i texten
     trvakt()    { "$PY" "$VMO/transkriptionsvakt.py" "$@"; }   # duger transkriptionen?
     sortera()   { "$PY" "$VMO/sortera.py"            "$@"; }   # förslag på temamapp
-    synka()     { "$PY" "$VMO/synka-namn.py"         "$@"; }   # laga efter omdöpt ljud
+    synka()     { "$PY" "$VMO/synka-namn.py"         "$@"; }   # laga efter nytt ljudfilnamn
     radera()    { "$PY" "$VMO/radera.py"             "$@"; }   # ta bort ett memo helt
-    dopom()     { "$PY" "$VMO/dop-om.py"             "$@"; }   # byt namn på ett memo
+    bytnamn()   { "$PY" "$VMO/byt-namn.py"           "$@"; }   # byt namn på ett memo
     vmo()       { cd "$VMO" || return; }
     granska()   { ( cd "$VMO/granska" && docker compose up ); }  # GUI på :8137
 
@@ -77,9 +77,9 @@ Kommandon (alla tar samma flaggor som skripten):
   trvakt [--alla]         transkriptioner som inte duger (upprepningsloopar)
   sortera                 numrerade förslag på temamapp för memon i incoming/
   sortera --flytta N      godkänn förslag N (--till M: välj mapp själv)
-  synka [--kor]           härledda filer följer med när ljudet döpts om
+  synka [--kor]           härledda filer följer med när ljudet bytt namn
   radera STAM [--kor]     ta bort ett memo helt (--totalt: även .md)
-  dopom GAMMALT NYTT      byt namn på ett memo och allt som pekar på det
+  bytnamn GAMMALT NYTT    byt namn på ett memo och allt som pekar på det
   propagera [--dry-run]   sprid fattade rättelser till orättade förekomster
   applicera [--dry-run]   skriv in besluten i alla färdiggranskade filer
   forbattra [--dry-run]   steg c -> .md, med negationsvakt efter varje fil

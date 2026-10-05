@@ -150,7 +150,7 @@ HARLEDDA_MARKORER = ("-corrections", "-bak.json", ".bak.json",
 # '.json'. Ordningen ÄR logiken — en kortare träff först skulle ge fel stam.
 #
 # Listan bor här därför att två skript måste vara överens om vad som hör till en
-# fil: synka-namn.py döper om familjen, och namnvakten avgör vad som ens är ett
+# fil: synka-namn.py byter namn på familjen, och namnvakten avgör vad som ens är ett
 # transkript. Går de isär lämnas filer kvar med gammal stam.
 HARLEDDA_SUFFIX = (
     "-corrections-2.json", "-corrections.json", "-corrections.txt",
@@ -321,7 +321,7 @@ def antal_operationer(side: dict) -> int:
 # Namnvakt
 #
 # File Naming Convention i CLAUDE.md gäller allt vi PRODUCERAR. Ljudet är
-# undantaget: 113 av 363 befintliga ljudfiler har versaler, och de döps inte om
+# undantaget: 113 av 363 befintliga ljudfiler har versaler, och de får inte nytt namn
 # utan att Lars ber om det. transkribera.py normaliserar stammen på väg ut, så
 # 'zego-Trump-akrist-1.m4a' ger 'zego-trump-akrist-1.json' och allt nedströms är
 # redan rent. En spärr mot versaler skulle alltså stoppa en tredjedel av arkivet
@@ -390,7 +390,7 @@ def _ljudindex(root: str) -> dict[str, tuple[str, ...]]:
     Cachad: en batch över 363 filer skulle annars gå igenom trädet en gång per
     fil. Ljudmängden ändras inte under en körning — vi skapar aldrig ljud — så
     cachen kan inte bli inaktuell mitt i ett jobb. Anropa nollstall_namnindex()
-    om något ändå döps om i samma process."""
+    om något ändå byter namn i samma process."""
     rot = Path(root)
     per_stam: dict[str, list[str]] = {}
     for f in rot.rglob("*"):
@@ -404,7 +404,7 @@ def _ljudindex(root: str) -> dict[str, tuple[str, ...]]:
 
 
 def nollstall_namnindex() -> None:
-    """Glöm det cachade stamindexet (efter en omdöpning i samma process)."""
+    """Glöm det cachade stamindexet (efter ett namnbyte i samma process)."""
     _ljudindex.cache_clear()
 
 
@@ -488,7 +488,7 @@ def vakta_transkript(cfg: dict, json_path: Path) -> list[str]:
             f"{json_path.name}: transkriptets namn bryter mot konventionen "
             f"({', '.join(brott)})",
             atgard="Transkript är härledda filer. Transkribera om ljudet, eller "
-                   f"döp om transkriptet och dess härledda filer till "
+                   f"byt namn på transkriptet och dess härledda filer till "
                    f"{normalize_stem(stem)!r}.")
 
     syskon = ljud_per_stam(json_path.parent).get(stem, [])
@@ -518,7 +518,7 @@ def vakta_transkript(cfg: dict, json_path: Path) -> list[str]:
     varningar: list[str] = []
     if not syskon:
         varningar.append("ingen ljudfil med den stammen i mappen — har ljudet "
-                         "flyttats eller döpts om?")
+                         "flyttats eller bytt namn?")
     elif namnbrott(syskon[0].stem):
         varningar.append(f"ljudfilen heter {syskon[0].name!r} och följer inte "
                          "konventionen; transkriptet är rätt namngivet")

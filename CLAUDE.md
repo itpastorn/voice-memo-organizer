@@ -54,7 +54,7 @@ ljudet, så ett flaggat transkript som försvunnit lämnar sin korrigeringsfil
 kvar. Noll föräldralösa = ingenting förlorat. Räkna också oflaggade över tid:
 de låg på 202 både 22 september och 1 oktober medan de flaggade gick från 91
 till 106, alltså exakt de nya transkripten. Arbetskopiorna i `granska/state/`
-är ett sämre mått — de blir föräldralösa av varje omdöpning, utan att något
+är ett sämre mått — de blir föräldralösa av varje namnbyte, utan att något
 gått fel.
 
 **Sex filer har gått hela vägen a → c**, i fem olika ämnesområden: NAR/politik,
@@ -108,7 +108,7 @@ Konkret:
 - Skriv inget som *bara* fungerar på CPU (t.ex. antaganden om att allt får plats i
   RAM, eller sekventiell bearbetning som förutsätter att GPU-parallellism aldrig
   blir aktuell).
-  **En teologisk aspekt** Lars är teolog och kristen och ogillar att orden "dop" eller "döpa" används för att byta namn på saker. Undvik begreppen "döpa till" och "döpa om". Använd i stället "ge namn"/"kalla" eller "byta namn"/"ändra namn". Detta gäller filnamn, 
+  **En teologisk aspekt** Lars är teolog och kristen och ogillar att orden "dop" eller "döpa" används för att byta namn på saker. Undvik begreppen "döpa till" och "döpa om". Använd i stället "ge namn"/"kalla" eller "byta namn"/"ändra namn". Detta gäller filnamn, kommunikationen i chatten, internt inuti skript, med mera.
 
 ## Datamapp
 
@@ -134,7 +134,7 @@ Ljudfilerna är mestadels `.m4a`, några `.mp3` och `.aac`. Prefixet `zego-` kom
 från inspelningsappen och behålls.
 
 Befintliga ljudfilnamn följer *inte* namnkonventionen nedan (`zego-Trump-akrist-1.m4a`
-har versaler). Ljudet döps inte om utan att Lars ber om det. Konventionen gäller
+har versaler). Ljudet byter inte namn utan att Lars ber om det. Konventionen gäller
 allt vi **producerar**.
 
 ## Pipeline
@@ -236,13 +236,13 @@ Flytten tar hela familjen — ljud, transkript och allt härlett — i ett svep,
 vägrar när ett målnamn redan finns. Arbetskopian i `granska/state/` är platt och
 behöver inte flyttas.
 
-### Namnbyte (`dop-om.py`)
+### Namnbyte (`byt-namn.py`)
 
-`dop-om.py <gammal-stam> <ny-stam>` döper om memot och lagar allt som pekar på
+`byt-namn.py <gammal-stam> <ny-stam>` ger memot ett nytt namn och lagar allt som pekar på
 det, i ett svep.
 
 **Det här är `synka-namn.py` baklänges, och delar dess kod.** Där lagar skriptet
-i efterhand det som blev föräldralöst när Lars döpt om ljudet för hand; här sker
+i efterhand det som blev föräldralöst när Lars gett ljudet ett nytt namn för hand; här sker
 bytet och lagningen tillsammans, så fönstret där arkivet är inkonsekvent aldrig
 uppstår. `Omdopning`, `kontrollera`, `genomfor`, `planera_falt`, `tillampa_falt`
 och `synka_gui` lånas som de är — en andra uppsättning regler hade kunnat hamna
@@ -265,7 +265,7 @@ inspelning texten kommer ur, så pekarfälten går inte att göra konsekventa).
 Nya namnet normaliseras enligt File Naming Convention och skriptet skriver ut
 vad det blev, så ett `"zego Nytt Ämne!"` som blir `zego-nytt-amne` syns direkt.
 
-**Verifierat mot ett låtsasarkiv:** 8 filer omdöpta, **10 pekarfält** lagade
+**Verifierat mot ett låtsasarkiv:** 8 filer namnändrade, **10 pekarfält** lagade
 (`audio_file` i `.json` och `-bak.json`, sidecarens tre fält, `.md`:ns tre
 frontmatter-nycklar, två omnämnanden i `-borttaget.txt`:s rubrikstycke) plus
 `current.json` och `status.json`. Åtta vägransvägar ger exit 2 med arkivet orört
@@ -333,7 +333,7 @@ just flyttat som kvarglömda — den letar nu bara i memots egen mapp.
 
 **`zego-prepare`** är ett Git Bash-alias för
 `workspace/adminscripts/zego-prepare.sh` — ett annat repo, inte en del av det här
-projektet. Det döper **bara om** `.m4a`-filerna i en mapp, i tre steg: stryker
+projektet. Det **byter bara namn** på `.m4a`-filerna i en mapp, i tre steg: stryker
 inledande "Lars Gunther", normaliserar namnet via `normalize-filenames.sh`, och
 lägger till `zego-`. Ljudinnehållet rörs inte, och "normalisera" i skriptet
 betyder filnamn, inte ljud.
@@ -357,7 +357,7 @@ föräldralösa (det `synka-namn.py` finns för att laga).
   enda i hela flödet som kunde förstöra originalljud.
 
   Nu räknar `zego-prepare` ut varje fils **slutnamn innan något flyttas**, och
-  vägrar hela körningen (exit 1, ingenting omdöpt) om två filer skulle hamna på
+  vägrar hela körningen (exit 1, inget namn ändrat) om två filer skulle hamna på
   samma namn. Rapporten säger om de krockande filerna är byte-identiska
   (`cmp -s`) — en dubblett kan raderas, olika innehåll är en inspelning som hade
   gått förlorad. Regeln för steg 2 hämtas från `normalize-filenames.sh --namn`,
@@ -1191,12 +1191,12 @@ konventionsbrott — den är en spärr mot **kollisioner**.
 
 Skillnaden är mätt, inte antagen. När vakten byggdes bröt **113 av 363
 ljudfiler** mot konventionen (112 versaler, 1 icke-ASCII, 1 blanksteg) — borta
-sedan omdöpningen 2026-08-28, men mätningen är kvar för att den avgjorde
+sedan namnbytena 2026-08-28, men mätningen är kvar för att den avgjorde
 designen. Alla 113 var ofarliga: `transkribera.py`
 normaliserar stammen på väg ut, så `zego-Trump-akrist-1.m4a` ger
 `zego-trump-akrist-1.json` och allt nedströms är redan rent. En spärr mot versaler
 hade stoppat en tredjedel av arkivet utan att avvärja ett enda fel — och den hade
-motsagt regeln ovan om att ljudet inte döps om.
+motsagt regeln ovan om att ljudet behåller sitt namn.
 
 Det farliga är i stället när normaliseringen får två filer att falla ihop:
 
@@ -1254,20 +1254,20 @@ filer och kör de övriga; `batch-flagga.py` filtrerar dem ur kön **före**
 kostnadsuppskattningen, så en spärrad fil aldrig hinner kosta ett API-anrop.
 
 `namnvakt.py` är översikten över hela arkivet — vad som är spärrat, vad som bara
-avviker, och vad som ska döpas om. `--alla` listar de avvikande namnen ett och ett.
+avviker, och vad som ska byta namn. `--alla` listar de avvikande namnen ett och ett.
 
-**När ljudet döps om (`synka-namn.py`).** Ljudet döps om för hand — det är Lars
+**När ljudet får ett nytt namn (`synka-namn.py`).** Namnet byter Lars själv — det är hans
 filer och hans taxonomi. Men de härledda filerna bär stammen både i sitt namn och
 i sitt innehåll, och de följer inte med av sig själv. Namnvakten ser resultatet
 ("ingen ljudfil med den stammen i mappen") men kan bara larma; `synka-namn.py`
 åtgärdar.
 
-Efter arkivomdöpningen 2026-08-28 var läget: **sex grupper om 26 härledda filer**
+Efter arkivets namnbyten 2026-08-28 var läget: **sex grupper om 26 härledda filer**
 var föräldralösa, och **89 innehållsfält** pekade på filer som inte fanns.
 
 Två fel, båda tysta:
 
-- **Föräldralösa grupper.** Hela familjen döps om — `.json`, `.srt`, `.txt`,
+- **Föräldralösa grupper.** Hela familjen får nytt namn — `.json`, `.srt`, `.txt`,
   `.md`, `-bak*.json`, `-corrections*`, `-borttaget.txt` — plus arbetskopian i
   `granska/state/`. `planering-med-ai` behövde dessutom **flyttas**: ljudet hade
   fått en temamapp.
@@ -1300,7 +1300,7 @@ Tre regler som är lätta att göra fel, och som alla tre kostade en rättning:
 
 `--dry-run` är **standard**; skriptet skriver bara med `--kor`. Det avviker från
 de andra batcharna med flit: här ligger färdiggranskat material, och 27
-omdöpningar är inget man ångrar med en knapp.
+namnbyten är inget man ångrar med en knapp.
 
 **Fällan som hittades på vägen:** `applicera-corrections.py:main()` läste aldrig
 `sys.argv`. `--dry-run` gav alltså en **skarp** apply, och en filsökväg på
@@ -1333,13 +1333,13 @@ Skriptet självt, kodboken och databasen bor i detta projekt
 - **Svenska.** Lars arbetar på svenska. Kod och kommentarer likaså, om inget annat
   sägs.
 - **Rör aldrig originalljudet.** Regeln gäller ljud*innehållet*: ingen omkodning,
-  ingen radering, ingen omdöpning på eget initiativ. Allt annat är återskapbart;
+  ingen radering, inget namnbyte på eget initiativ. Allt annat är återskapbart;
   ljudet är det inte. Tre undantag, alla snäva:
   - **Metadatataggar (steg f).** Ljudströmmen kopieras bit för bit, skrivningen
     sker via tempfil + atomiskt byte, och strömmen verifieras oförändrad
     efteråt. Ingen annan skrivning *i* ljudfilen är tillåten.
-  - **`dop-om.py`**, när Lars pekar ut memot. Ett namnbyte rör inte en byte av
-    ljudet — det är en katalogpost — och alternativet (Lars döper om för hand,
+  - **`byt-namn.py`**, när Lars pekar ut memot. Ett namnbyte rör inte en byte av
+    ljudet — det är en katalogpost — och alternativet (Lars byter namn för hand,
     `synka-namn.py` lagar efteråt) lämnar arkivet inkonsekvent däremellan.
   - **`radera.py`**, när Lars pekar ut memot. Minnesanteckningar man är klar med
     ska kunna lämna systemet; se Radering.

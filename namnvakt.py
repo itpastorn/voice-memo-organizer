@@ -1,7 +1,7 @@
 """Namnvakt över hela arkivet: vad pipelinen vägrar bearbeta, och varför.
 
 Skripten kör vakten själva och stoppar den enskilda filen. Det här är
-översikten — vad som är spärrat, vad som bara avviker, och vad som ska döpas om.
+översikten — vad som är spärrat, vad som bara avviker, och vad som ska byta namn.
 
     namnvakt.py              spärrar och en sammanfattning av avvikelserna
     namnvakt.py --alla       listar också varje avvikande ljudfilnamn
@@ -11,7 +11,7 @@ Skripten kör vakten själva och stoppar den enskilda filen. Det här är
 Exit-kod 1 när något är spärrat, annars 0.
 
 Konventionen (File Naming Convention i CLAUDE.md) gäller allt vi PRODUCERAR.
-Ljudet är undantaget — det döps inte om utan att Lars ber om det, och
+Ljudet är undantaget — det byter inte namn utan att Lars ber om det, och
 transkribera.py normaliserar stammen på väg ut. Därför är ett avvikande
 ljudfilnamn en upplysning, medan en KOLLISION är ett fel: två ljudfiler med
 samma normaliserade stam skriver samma .json, och den ena inspelningen kommer
@@ -111,7 +111,7 @@ def main() -> int:
     if avvikande:
         print(f"AVVIKANDE LJUDFILNAMN — {len(avvikande)} av {n_ljud}")
         print("  Ofarligt: transkribera.py normaliserar stammen på väg ut, så")
-        print("  utdata blir rätt namngivet ändå. Ljudet döps inte om av oss.")
+        print("  utdata blir rätt namngivet ändå. Vi byter inte namn på ljudet.")
         print()
         raknare: dict[str, int] = {}
         for _p, brott in avvikande:

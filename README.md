@@ -21,7 +21,7 @@ vmohjalp                 # listar kommandona
 ```
 
 Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
-`tokenvakt`, `trvakt`, `sortera`, `synka`, `dopom`, `radera`, `propagera`,
+`tokenvakt`, `trvakt`, `sortera`, `synka`, `bytnamn`, `radera`, `propagera`,
 `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
@@ -46,17 +46,17 @@ skriver de samma `.json`, och den ena inspelningen kommer aldrig in i pipelinen.
 **Just nu spärras ingenting** (mätt 2026-10-02: 366 ljudfiler, 0 kollisioner,
 0 avvikande namn). Alla sex fallen är avgjorda — ett av dem dolde 47 minuter
 ljud som aldrig kunnat transkriberas. Dyker ett nytt upp är åtgärden alltid att
-döpa om ljudet så att stammarna blir unika i **hela** arkivet; `granska/state/`
+byta namn på ljudet så att stammarna blir unika i **hela** arkivet; `granska/state/`
 är platt, så det räcker inte att de skiljer sig inom mappen.
 
-### 0b. Har du döpt om ljudfiler?
+### 0b. Har du bytt namn på ljudfiler?
 
 ```bash
 synka                    # vad har halkat efter? (skriver inget)
-synka --kor              # döp om de härledda filerna och laga pekarfälten
+synka --kor              # ge de härledda filerna nya namn och laga pekarfälten
 ```
 
-Ljudet döper du om själv. De härledda filerna (`.json`, `.srt`, `.txt`, `.md`,
+Namnet på ljudet byter du själv. De härledda filerna (`.json`, `.srt`, `.txt`, `.md`,
 `-bak*.json`, `-corrections*`, `-borttaget.txt`) bär stammen både i namnet och i
 innehållet och följer inte med — `synka` tar hela familjen, inklusive
 arbetskopian i `granska/state/`, och flyttar den om ljudet bytt temamapp.
@@ -211,8 +211,8 @@ tillförlitlig över tid; reglerna behöver inte vara perfekta från början.
 ### 7. Byta namn på ett memo
 
 ```bash
-dopom zego-gammalt zego-nytt              # gör det direkt
-dopom zego-gammalt zego-nytt --dry-run    # visa planen först
+bytnamn zego-gammalt zego-nytt              # gör det direkt
+bytnamn zego-gammalt zego-nytt --dry-run    # visa planen först
 ```
 
 **Här är `--dry-run` inte standard**, till skillnad från `synka` och `radera`:
@@ -220,7 +220,7 @@ ingenting går förlorat av ett namnbyte, och kontrollen sker ändå innan förs
 filen rörs. Blir namnet fel kör du bara en gång till.
 
 Namnet normaliseras enligt File Naming Convention, och skriptet skriver ut vad
-det blev (`"zego Nytt Ämne!"` → `zego-nytt-amne`). Det som döps om och lagas:
+det blev (`"zego Nytt Ämne!"` → `zego-nytt-amne`). Det som får nytt namn och lagas:
 ljudet, `.json`, `-bak*.json`, `.srt`, `.txt`, `.md`, `-corrections*`,
 `-borttaget.txt`, arbetskopian i `granska/state/` — plus **varje pekare inuti
 filerna**: `audio_file`, `transcript_json`, `base_json`, `.md`:ns frontmatter,
@@ -231,8 +231,8 @@ rubrikstycket i `-borttaget.txt`, `granska/status.json` och
 är platt, så två memon med samma stam skulle få sina sidecars att skriva över
 varandra. Är namnet upptaget avbryter skriptet utan att röra något.
 
-Det här är `synka --kor` baklänges: `synka` lagar i efterhand när du döpt om
-ljudet för hand, `dopom` gör bytet och lagningen i ett svep så att arkivet
+Det här är `synka --kor` baklänges: `synka` lagar i efterhand när du bytt
+namn på ljudet för hand, `bytnamn` gör bytet och lagningen i ett svep så att arkivet
 aldrig är inkonsekvent däremellan. Maskineriet är samma kod.
 
 ### 7b. Radera ett memo du är klar med
@@ -279,9 +279,9 @@ en medveten ändring går inte att skilja från en bugg.
 | kontrollera om Whisper-token läckt in i texten | `tokenvakt` (`--alla` visar varje träff med tidsstämpel) |
 | hitta transkriptioner som inte duger alls | `trvakt` — upprepningsloopar och filer med för få ord |
 | få ett memo ur `incoming/` till rätt temamapp | `sortera` föreslår numrerat, `sortera --flytta N` genomför |
-| jag har döpt om eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
+| jag har bytt namn på eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
 | ta bort ett memo jag är helt klar med | `radera STAM` visar, `radera STAM --kor` gör det |
-| byta namn på ett memo | `dopom GAMMALT NYTT` — döper om allt och lagar varje pekare |
+| byta namn på ett memo | `bytnamn GAMMALT NYTT` — ger allt nya namn och lagar varje pekare |
 | se kommandolistan igen | `vmohjalp` |
 | gå till projektmappen | `vmo` |
 | köra en enda fil genom steg a | sätt `data.test_file` i config.toml, kör `"$PY" "$VMO/transkribera.py"` |

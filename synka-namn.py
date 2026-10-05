@@ -1,6 +1,6 @@
-"""Låt de härledda filerna följa med när ljudet döpts om eller flyttats.
+"""Låt de härledda filerna följa med när ljudet bytt namn eller flyttats.
 
-Ljudet döps om för hand — det är Lars filer och hans taxonomi. Men `.json`,
+Namnet på ljudet byter Lars själv — det är hans filer och hans taxonomi. Men `.json`,
 `.srt`, `.txt`, `.md`, `-bak*.json`, `-corrections*` och `-borttaget.txt` bär
 stammen i sitt namn OCH i sitt innehåll, och de följer inte med av sig själv.
 Namnvakten ser resultatet ("ingen ljudfil med den stammen i mappen") men kan
@@ -8,11 +8,11 @@ bara larma. Det här skriptet åtgärdar.
 
     synka-namn.py            visar vad som skulle göras (STANDARD — skriver inget)
     synka-namn.py --kor      genomför
-    synka-namn.py --bara-falt   hoppa över omdöpningar, laga bara innehållsfält
+    synka-namn.py --bara-falt   hoppa över namnbyten, laga bara innehållsfält
 
 Två fel lagas, båda tysta:
 
-1. **Föräldralösa grupper.** Hela familjen kring en stam döps om (och flyttas,
+1. **Föräldralösa grupper.** Hela familjen kring en stam får nytt namn (och flyttas,
    när ljudet bytt temamapp), inklusive arbetskopian i granska/state/.
 2. **Innehållsfält som pekar fel.** `audio_file`, `transcript_json`,
    `base_json`, och `.md`:ns frontmatter. Skiftlägesexakt: Windows döljer
@@ -65,7 +65,7 @@ class SynkFel(Exception):
 
 
 @dataclass(slots=True)
-class Omdopning:
+class Namnbyte:
     gammal_mapp: Path
     gammal_stam: str
     ny_mapp: Path
@@ -77,7 +77,7 @@ class Omdopning:
 
 @dataclass(slots=True)
 class Faltfix:
-    fil: Path                 # sökvägen EFTER en eventuell omdöpning
+    fil: Path                 # sökvägen EFTER ett eventuellt namnbyte
     falt: str
     gammalt: str
     nytt: str
@@ -192,9 +192,9 @@ def bevisa(data: dict, ljud: Path, gammal_stam: str,
             f"och namnen hör ihop (saknar duration-fält)")
 
 
-def planera_omdopningar(root: Path) -> tuple[list[Omdopning], list[str]]:
+def planera_namnbyten(root: Path) -> tuple[list[Namnbyte], list[str]]:
     """Föräldralösa grupper parade med sitt ljud. Returnerar (planer, olösta)."""
-    planer: list[Omdopning] = []
+    planer: list[Namnbyte] = []
     olosta: list[str] = []
 
     # Bara grupper som faktiskt saknar ljud är intressanta. Utan den här
@@ -233,7 +233,7 @@ def planera_omdopningar(root: Path) -> tuple[list[Omdopning], list[str]]:
             continue
 
         ljud, bevis = traffar[0]
-        planer.append(Omdopning(
+        planer.append(Namnbyte(
             gammal_mapp=mapp, gammal_stam=stam,
             ny_mapp=ljud.parent, ny_stam=ljud.stem,
             filer=sorted(filer), bevis=bevis,
@@ -243,7 +243,7 @@ def planera_omdopningar(root: Path) -> tuple[list[Omdopning], list[str]]:
 
 
 # --------------------------------------------------------------------------- #
-# Omdöpning
+# Namnbyte
 # --------------------------------------------------------------------------- #
 
 def nytt_namn(fil: Path, gammal_stam: str, ny_stam: str) -> str:
@@ -251,7 +251,7 @@ def nytt_namn(fil: Path, gammal_stam: str, ny_stam: str) -> str:
     return f"{ny_stam}{suffix}"
 
 
-def kontrollera(plan: Omdopning) -> None:
+def kontrollera(plan: Namnbyte) -> None:
     """Vägra innan något rörts. Ett halvt utfört byte är värre än inget."""
     for fil in plan.filer:
         mal = plan.ny_mapp / nytt_namn(fil, plan.gammal_stam, plan.ny_stam)
@@ -269,7 +269,7 @@ def kontrollera(plan: Omdopning) -> None:
                        "gäller och ta bort den andra.")
 
 
-def genomfor(plan: Omdopning) -> list[tuple[Path, Path]]:
+def genomfor(plan: Namnbyte) -> list[tuple[Path, Path]]:
     gjorda: list[tuple[Path, Path]] = []
     for fil in plan.filer:
         mal = plan.ny_mapp / nytt_namn(fil, plan.gammal_stam, plan.ny_stam)
@@ -328,10 +328,10 @@ def byt_stam(varde: str, ratt_stam: str) -> str | None:
 
 
 def planera_falt(root: Path, transkript=None) -> list[Faltfix]:
-    """Pekarfält som inte stämmer med disk. Körs EFTER omdöpningarna, så den
+    """Pekarfält som inte stämmer med disk. Körs EFTER namnbytena, så den
     ser de nya namnen och behöver inte simulera dem.
 
-    `transkript` begränsar svepet till utpekade filer — `dop-om.py` lagar ett
+    `transkript` begränsar svepet till utpekade filer — `byt-namn.py` lagar ett
     enda memo och ska inte läsa om hela arkivet för att göra det."""
     cfg = k.load_config()
     fixar: list[Faltfix] = []
@@ -413,7 +413,7 @@ def md_fixar(md: Path, stam: str, ljud: str) -> list[Faltfix]:
         nyckel, varde = nyckel.strip(), varde.strip()
         if nyckel == "titel":
             # Steg c sätter titel till stammen: uppmätt 54 av 55 .md-filer, och
-            # den enda avvikaren var en fil vars ljud döpts om. En titel som
+            # den enda avvikaren var en fil vars ljud bytt namn. En titel som
             # redan är normaliserad är alltså maskinsatt och ska följa med
             # stammen. Har du skrivit en riktig rubrik — med blanksteg eller
             # versal — är den innehåll, och stammen trycks inte över den.
@@ -477,8 +477,8 @@ def tillampa_falt(fix: Faltfix) -> None:
 # GUI:ts eget tillstånd
 # --------------------------------------------------------------------------- #
 
-def sokvagsbyten(root: Path, planer: list[Omdopning]) -> dict[str, str]:
-    """Gammal -> ny sökväg relativt datamappen, för varje omdöpt fil.
+def sokvagsbyten(root: Path, planer: list[Namnbyte]) -> dict[str, str]:
+    """Gammal -> ny sökväg relativt datamappen, för varje namnändrad fil.
 
     Hela sökvägen och inte bara stammen: planering-med-ai flyttade dessutom från
     inkorgen till meta-admin-todo-fix/, och en ren stamersättning hade lämnat
@@ -491,7 +491,7 @@ def sokvagsbyten(root: Path, planer: list[Omdopning]) -> dict[str, str]:
     return byten
 
 
-def synka_gui(root: Path, planer: list[Omdopning]) -> list[str]:
+def synka_gui(root: Path, planer: list[Namnbyte]) -> list[str]:
     """current.json och status.json pekar med stam respektive relativ sökväg.
     Lämnas de kvar öppnar GUI:t en fil som inte finns."""
     gjort: list[str] = []
@@ -540,7 +540,7 @@ def main() -> int:
     print(f"Datamapp: {root}")
     print()
 
-    planer, olosta = ([], []) if bara_falt else planera_omdopningar(root)
+    planer, olosta = ([], []) if bara_falt else planera_namnbyten(root)
 
     # Vägra allt innan något rörts.
     vagrade = []
@@ -586,7 +586,7 @@ def main() -> int:
         print()
 
     if not kor:
-        # Fältfixarna beräknas mot nuvarande namn. Efter omdöpningen tillkommer
+        # Fältfixarna beräknas mot nuvarande namn. Efter namnbytet tillkommer
         # de som gruppen ovan för med sig — därför räknas de separat här.
         fixar = planera_falt(root)
         print(f"INNEHÅLLSFÄLT — {len(fixar)} som pekar fel idag")
@@ -604,13 +604,13 @@ def main() -> int:
         return 0
 
     # --- skarpt ---
-    # GUI-tillståndet synkas FÖRE omdöpningen: sokvagsbyten() beskriver planen,
+    # GUI-tillståndet synkas FÖRE namnbytet: sokvagsbyten() beskriver planen,
     # och den behöver inte disken för att göra det.
     gjort = synka_gui(root, planer) if planer else []
 
     for p in planer:
         antal = len(genomfor(p))
-        print(f"omdöpt: {p.gammal_stam} -> {p.ny_stam} ({antal} filer)")
+        print(f"namnändrad: {p.gammal_stam} -> {p.ny_stam} ({antal} filer)")
     if planer:
         print()
 
@@ -623,7 +623,7 @@ def main() -> int:
         print(f"uppdaterad: {g}")
 
     print()
-    print(f"Klart. {len(planer)} grupp(er) omdöpta, {len(fixar)} fält rättade.")
+    print(f"Klart. {len(planer)} grupp(er) namnändrade, {len(fixar)} fält rättade.")
     print("Kör namnvakt.py för att bekräfta att inget är kvar.")
     return 0
 

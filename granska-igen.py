@@ -173,7 +173,7 @@ def main() -> int:
                       "--fortsatt för att granska resten utan att förlora något.",
                       file=sys.stderr)
             else:
-                print("Ta bort eller döp om filen (och ev. kopian i granska/state/) "
+                print("Ta bort eller byt namn filen (och ev. kopian i granska/state/) "
                       "och kör igen.", file=sys.stderr)
             return 1
         if not rester:
