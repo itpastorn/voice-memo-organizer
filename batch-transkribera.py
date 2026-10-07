@@ -147,6 +147,10 @@ def main() -> int:
 
     logger.info("=== Batch: %d fil(er) att köra ===", len(targets))
     sparrade = 0
+    # Tysthetskontrollen görs här, före modellinläsningen och också vid
+    # --dry-run, så att listningen redan visar vad som kommer att hoppas över.
+    # Resultatet återanvänds i körslingan — ingen fil mäts två gånger.
+    tysta: set[Path] = set()
     for i, p in enumerate(targets, 1):
         done = json_path_for(p).exists()
         try:
@@ -155,10 +159,21 @@ def main() -> int:
         except k.NamnFel:
             sparrade += 1
             not_ = "   (SPÄRRAD — namnkollision)"
+        if not not_:
+            niva = k.toppniva(p)
+            if k.ar_tyst(niva):
+                tysta.add(p)
+                not_ = f"   (TYST — toppnivå {niva:.1f} dB, hoppas över)"
+            elif niva is None:
+                not_ = "   (ljudnivån gick inte att mäta — körs ändå)"
         logger.info("  %d. %s%s", i, p.relative_to(root).as_posix(), not_)
     if sparrade:
         logger.warning("%d fil(er) spärrade av namnvakten — kör namnvakt.py för "
                        "att se varför och vad som ska byta namn.", sparrade)
+    if tysta:
+        logger.warning("%d fil(er) är tysta och hoppas över — de innehåller inget "
+                       "tal, bara det Whisper fyller tystnad med. Lyssna och radera "
+                       "med radera.py om de är tomma.", len(tysta))
     if dry_run:
         logger.info("--dry-run: ingen transkribering körd.")
         return 0
@@ -201,6 +216,9 @@ def main() -> int:
                 logger.error("[%d/%d] SPÄRRAD %s: %s", i, len(targets), audio.name, e)
                 if e.atgard:
                     logger.error("       %s", e.atgard)
+                continue
+            if audio in tysta:
+                logger.warning("[%d/%d] TYST, hoppar över: %s", i, len(targets), audio.name)
                 continue
 
             logger.info("[%d/%d] transkriberar: %s", i, len(targets), audio.name)

@@ -16,7 +16,6 @@ import json
 import logging
 import sys
 import time
-import tomllib
 from datetime import datetime
 from pathlib import Path
 
@@ -32,9 +31,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 # Konfiguration
 # --------------------------------------------------------------------------- #
 
-def load_config() -> dict:
-    with open(PROJECT_ROOT / "config.toml", "rb") as f:
-        return tomllib.load(f)
+# Den gemensamma läsaren, så att VMO_DATA_ROOT gäller här som överallt annars.
+# Aliaset behålls för att batch-transkribera.py importerar t.load_config.
+load_config = k.load_config
 
 
 def resolve_under_project(value: str) -> Path:
@@ -121,6 +120,17 @@ def main() -> int:
         logger.error("FEL: %s", e)
         if e.atgard:
             logger.error("     %s", e.atgard)
+        return 2
+
+    # Tysthetskontroll, också före modellen: en tyst inspelning ger bara
+    # Whispers tystnadsfyllnad ("Tack. Tack. ...") — se korrigeringar.toppniva.
+    niva = k.toppniva(audio_path)
+    if niva is None:
+        logger.warning("VARNING: kunde inte mäta ljudnivån (ffmpeg) — kör ändå.")
+    elif k.ar_tyst(niva):
+        logger.error("FEL: inspelningen är tyst (toppnivå %.1f dB, gräns %.0f dB). "
+                     "Det finns inget tal att transkribera.", niva, k.TYST_TOPPNIVA_DB)
+        logger.error("     Lyssna på filen; är den tom kan den raderas med radera.py.")
         return 2
 
     model_name = cfg["model"]["name"]

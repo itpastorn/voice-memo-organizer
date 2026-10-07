@@ -16,6 +16,7 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 import sys
 import tomllib
 import unicodedata
@@ -986,6 +987,47 @@ def transkriptionsproblem(matt: dict | None) -> list[str]:
         problem.append(
             f"avkortad: texten slutar {matt['tackning']:.0%} in i ljudet")
     return problem
+
+
+# --------------------------------------------------------------------------- #
+# Tysthetskontroll — före steg a
+#
+# Loopfilerna ovan visade sig vara TYSTA inspelningar (mätt 2026-10-05): alla
+# nio låg på toppnivå exakt -78,3 dB, nästa fil i arkivet på -16,1 dB och
+# medianen på 0 dB. KB-Whisper fyller tystnad med "Tack. Tack. ... Text: Mia
+# Lindhagen" — undertextkrediter ur SVT-materialet den tränats på. En tyst fil
+# kostar alltså full CPU-tid och ger en transkription som bara är skräp.
+#
+# Tröskeln ligger mitt i ett glapp på över 60 dB, inte nära datan. Kontrollen
+# avkodar hela filen (en tyst inledning bevisar ingenting), vilket tar
+# sekunder — försumbart mot transkriberingen.
+# --------------------------------------------------------------------------- #
+
+TYST_TOPPNIVA_DB = -60.0
+
+
+def toppniva(ljud: Path) -> float | None:
+    """Ljudfilens toppnivå i dB enligt ffmpeg volumedetect.
+
+    -inf för digital nolla. None om mätningen inte gick att göra (ffmpeg
+    saknas eller filen gick inte att avkoda) — då vet vi ingenting, och
+    anroparen ska varna i stället för att spärra."""
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-nostats", "-i", str(ljud),
+             "-af", "volumedetect", "-f", "null", "-"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    m = re.search(r"max_volume: (-?[\d.]+|-inf) dB", r.stderr)
+    if not m:
+        return None
+    return float("-inf") if m.group(1) == "-inf" else float(m.group(1))
+
+
+def ar_tyst(niva: float | None) -> bool:
+    """Sant bara när mätningen lyckades OCH visar tystnad."""
+    return niva is not None and niva < TYST_TOPPNIVA_DB
 
 
 # --------------------------------------------------------------------------- #

@@ -662,6 +662,39 @@ Båda trösklarna ligger i **breda tomrum** i mätningen, inte nära datan. File
 under en minut bedöms inte alls — där blir måtten brus, och en tvåsekunders
 minnesanteckning på två ord är inte trasig.
 
+**Orsaken är tyst ljud, inte en modell som fastnat (mätt 2026-10-05).** Alla
+loopfiler som fanns kvar då — åtta transkriberade plus en otranskriberad —
+har toppnivå **exakt −78,3 dB** och −70 LUFS (mätarens golv). Nästa fil i
+arkivet ligger på −16,1 dB, medianen på 0 dB. Inspelningen innehåller alltså
+ingenting, och *"Tack. Tack. Jag tackar för mig … Text: Mia Lindhagen"* är vad
+KB-Whisper fyller tystnad med — undertextkrediter ur SVT-materialet den tränats
+på. Loopen täcker hela filen från första sekunden. Ingen metadata skiljer de
+tysta filerna från de övriga (samma codec, samplingsfrekvens och container; 161
+filer kom in samma vecka i februari utan att vara tysta), så felet uppstod
+sannolikt vid inspelningen. Att flera spelades in i följd samma förmiddag
+(tre den 1 februari 09:25–09:39, två den 3 januari) tyder på ett läge i
+telefonen, inte en trasig fil — omätt. Tystheten mäts med
+`ffmpeg -af volumedetect` på sekunder per fil; den hade kunnat fånga filerna
+**före** steg a.
+
+**Alla nio raderades 2026-10-05** på Lars begäran, med `radera.py --totalt`
+(loggat i `logs/arkivlogg.log`). Ingen av dem bar ett fattat beslut eller en
+`.md`. Lars hade dessförinnan raderat några med samma fel för hand.
+
+**Tysthetskontrollen (`korrigeringar.toppniva` + `ar_tyst`, 2026-10-07)** mäter
+toppnivån före steg a och spärrar under **−60 dB** — mitt i glappet, inte nära
+datan. `batch-transkribera.py` mäter när kön listas, alltså före modellen och
+också vid `--dry-run`, och hoppar över tysta filer; `transkribera.py` avvisar
+med exit 2. Går nivån inte att mäta (ffmpeg saknas, filen går inte att avkoda)
+körs filen ändå med en varning — "vet inte" är inte detsamma som "tyst".
+Kontrollen avkodar hela filen, eftersom en tyst inledning inte bevisar
+någonting. Kostnaden är uppmätt: **drygt en minut för hela kön på 56 filer,
+12 h ljud**, ingen av dem tyst. Prövad mot en genererad tyst fil (−91 dB,
+spärrad), en ton (−16 dB, körs), en saknad fil (None, körs) och en riktig fil
+ur arkivet (0 dB). `transkribera.load_config` är nu ett alias för den
+gemensamma, så att `VMO_DATA_ROOT` gäller i steg a också — det var så provet
+kunde köras mot en låtsasdatamapp.
+
 **Whispers egna mått dög inte.** `compression_ratio` räknas per segment och ser
 därför inte en loop som går *över* segmentgränser: högsta värdet i hela arkivet
 är 2,23, under Whispers egen larmgräns 2,4. `no_speech_prob` är 0,00 i samtliga
@@ -1299,11 +1332,12 @@ var ett tyst fel som ingenting annat i kedjan hade sagt ifrån om. Utfallen:
 | `zego-predikan-2` i två temamappar | en kopia borta; den i `andra-ideer` står kvar, ännu otranskriberad |
 | `zego-liberalteologi-…-halldorf` i `incoming/` + sorterad | kopian i inkorgen raderad 2026-09-19 |
 
-**Två rester att känna till.** `granska/state/` bär sex föräldralösa
-arbetskopior efter uppstädningen — arkivkopian är platt, så den följer inte med
-när en stam försvinner eller byter namn. Fem av dem bär inga beslut;
-torpseminariets två bär 183 respektive 96, men de är **förbrukade** (de
-applicerades och blev `.md` redan 20 juli). Och `zego-planering-med-ai` tappade
+**En rest att känna till.** De sex föräldralösa arbetskopiorna i
+`granska/state/` raderades 2026-10-07 på Lars begäran; torpseminariets två
+bar 183 respektive 96 beslut, men de var förbrukade sedan 20 juli. Arkivkopian
+är platt och följer inte med när en stam försvinner eller byter namn utanför
+`radera.py`/`byt-namn.py` — nya föräldralösa uppstår alltså av handpåläggning.
+Och `zego-planering-med-ai` tappade
 `.json`/`.srt`/`.txt` men har kvar sitt ljud: den behöver transkriberas och
 flaggas om, vilket kostar CPU och ~$0,25 men ingen granskningstid — dess
 arbetskopia hade noll fattade beslut.
