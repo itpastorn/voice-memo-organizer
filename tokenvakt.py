@@ -11,10 +11,10 @@ kvar i segmentet och följer med ut i `.json`, `.txt` och `.srt`. Den är svår 
 se därför att Whisper delar den över flera ordtokens — `<`, `|nospeech`, `|`,
 `>` — så varje ord för sig ser oskyldigt ut. Se `korrigeringar.specialtoken_traffar`.
 
-Vakten **rensar inte**. Orden ingår i `global_index`, och att ta bort dem
-förskjuter varje index efter träffen. Det skulle förstöra granskningsbesluten i
-de sidecars som redan finns. Rensningen kräver därför att indexen skrivs om i
-samma svep, och det är ett eget steg.
+Vakten **rensar inte** — det gör `rensa-token.py`, och bara i filer som
+ingenting annat pekar på. Orden ingår i `global_index`, och att ta bort dem
+förskjuter varje index efter träffen. I filer med sidecar, `-bak.json` eller
+`.md` måste indexen skrivas om i samma svep (steg 2 av issue #12, ej byggt).
 
 Se CLAUDE.md.
 """
@@ -60,7 +60,8 @@ def granska_en(cfg: dict, p: Path) -> dict | None:
         "fil": p,
         "modell": (data.get("model") or "?").split("-")[-1],
         "traffar": traffar,
-        "mitt_i_tal": sum(1 for t in traffar if not t["helt_segment"]),
+        "orena": sum(1 for t in traffar if not t["ren"]),
+        "hinder": k.tokenrensning_hinder(p, data),
         "andel": tokenord / ord_totalt if ord_totalt else 0.0,
         "beslut": beslut,
         "applicerad": bool(data.get("corrections_applied_at")),
@@ -96,45 +97,46 @@ def main() -> int:
         return 0
 
     tot = sum(len(r["traffar"]) for r in rapporter)
-    mitt = sum(r["mitt_i_tal"] for r in rapporter)
-    riskabla = [r for r in rapporter if r["beslut"] or r["applicerad"] or r["md"]]
+    orena = sum(r["orena"] for r in rapporter)
+    riskabla = [r for r in rapporter if r["hinder"]]
 
     print(f"SPECIALTOKEN — {tot} träffar i {len(rapporter)} av {len(filer)} transkript")
     print()
-    print(f"{'fil':66s} {'modell':6s} {'träff':>5s} {'i tal':>5s} {'andel':>6s} "
+    print(f"{'fil':66s} {'modell':6s} {'träff':>5s} {'oren':>5s} {'andel':>6s} "
           f"{'beslut':>6s} {'appl':>4s} {'md':>3s}")
     for r in sorted(rapporter, key=lambda x: -len(x["traffar"])):
         rel = r["fil"].relative_to(root).as_posix()
-        risk = r["beslut"] or r["applicerad"] or r["md"]
+        risk = r["hinder"]
         kort = rel if len(rel) <= 66 else "…" + rel[-65:]
         print(f"{kort:66s} {r['modell']:6s} {len(r['traffar']):5d} "
-              f"{r['mitt_i_tal']:5d} {r['andel']:6.1%} {r['beslut']:6d} "
+              f"{r['orena']:5d} {r['andel']:6.1%} {r['beslut']:6d} "
               f"{'JA' if r['applicerad'] else '-':>4s} {'JA' if r['md'] else '-':>3s}"
               f"{'  <-- RÖR INTE' if risk else ''}")
         if visa_alla:
             for t in r["traffar"]:
-                var = "hela segmentet" if t["helt_segment"] else "MITT I TAL"
+                var = ("hela segmentet" if t["helt_segment"] else
+                       "ren, mitt i tal" if t["ren"] else "OREN — ihop med tal")
                 ord_ = f"ord {t['ord'][0]}–{t['ord'][-1]}" if t["ord"] else "inga ordindex"
                 print(f"      {tid(t['start'])}  {t['token']!r:20s} {ord_:16s} {var}")
 
     print()
-    print(f"**{mitt} av {tot} träffar sitter mitt i tal.** Där är tokenen ihopklistrad med")
-    print("riktiga ord ('<|nospeech|>ologi,'), så en mekanisk strykning tar text med sig.")
-    print("Resten utgör hela sitt segment och går att ta bort rakt av.")
+    print(f"**{orena} av {tot} träffar är orena** — tokenen sitter ihop med riktiga ord")
+    print("('<|nospeech|>ologi,'), så en mekanisk strykning tar text med sig. De")
+    print("lämnas åt en människa. Övriga går att stryka rakt av.")
     print()
     if riskabla:
-        print(f"**{len(riskabla)} filer bär granskningsbeslut, apply eller .md.** Orden ingår i")
-        print("global_index, så en rensning förskjuter varje index efter träffen och")
-        print("förstör besluten. De filerna kräver att indexen skrivs om i samma svep.")
-    else:
-        print("Ingen av filerna bär granskningsbeslut — en rensning kan göras utan att")
-        print("skriva om några ordindex.")
+        print(f"**{len(riskabla)} filer har sidecar, apply eller .md** (RÖR INTE). Orden ingår")
+        print("i global_index — även ogranskade flaggor pekar på dem — så en rensning")
+        print("förskjuter varje index efter träffen. De kräver steg 2 av issue #12.")
+    if len(riskabla) < len(rapporter):
+        print(f"{len(rapporter) - len(riskabla)} filer pekas inte på av något och kan rensas: "
+              "rensa-token.py.")
     print()
     print("`andel` är hur stor del av filens ord som är tokenord. **Den duger inte")
     print("ensam som mått på en misslyckad transkription** — en kort fil får hög andel")
     print("av en enda träff. Använd den tillsammans med ord per minut.")
     print()
-    print("Vakten rensar inte. Den rapporterar.")
+    print("Vakten rensar inte. Den rapporterar; rensa-token.py rensar.")
     return 1
 
 

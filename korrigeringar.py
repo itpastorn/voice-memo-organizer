@@ -934,10 +934,11 @@ def specialtoken_traffar(segments: list[dict]) -> list[dict]:
     numrering som flatten_words), själva tokensträngen, starttiden och om
     tokenen utgör hela segmentet.
 
-    `helt_segment` avgör hur farlig träffen är att laga: är segmentet bara token
-    kan det tas bort rakt av, men sitter tokenen mitt i tal sitter den ihop med
-    riktiga ord ('<|nospeech|>ologi,') och en mekanisk strykning skulle ta text
-    med sig.
+    `ren` avgör om träffen går att stryka mekaniskt: orden den täcker innehåller
+    ingenting utöver tokenen. En oren träff sitter ihop med riktiga ord
+    ('<|nospeech|>ologi,', 'h<|nospeech|>'), och en strykning skulle ta text
+    med sig. `helt_segment` säger dessutom om segmentet blir tomt — men en ren
+    träff mitt i ett segment med tal går lika bra att ta bort.
     """
     traffar: list[dict] = []
     gi = 0
@@ -953,17 +954,41 @@ def specialtoken_traffar(segments: list[dict]) -> list[dict]:
         # ordindex att peka ut.
         sok = text if ord_ else (seg.get("text") or "")
         for m in SPECIALTOKEN_RE.finditer(sok):
-            idx = [gi + j for j, (a, b) in enumerate(spann)
-                   if a < m.end() and b > m.start()]
+            lokala = [j for j, (a, b) in enumerate(spann)
+                      if a < m.end() and b > m.start()]
+            idx = [gi + j for j in lokala]
+            tackt = "".join(ord_[j].get("word", "") for j in lokala)
             traffar.append({
                 "segment": si,
                 "ord": idx,
                 "token": m.group(0),
                 "start": seg.get("start"),
                 "helt_segment": bool(ord_) and len(idx) == len(ord_),
+                "ren": bool(lokala) and tackt.strip() == m.group(0),
             })
         gi += len(ord_)
     return traffar
+
+
+def tokenrensning_hinder(json_path: Path, data: dict) -> list[str]:
+    """Det som gör att transkriptets ordindex inte får förskjutas.
+
+    Tom lista = inget pekar på ordpositionerna, och tokenord kan strykas rakt
+    av. Allt härlett utom .srt/.txt räknas — de skrivs om ur JSON:en — och en
+    sidecar räknas även när ingen flagga är granskad: en ogranskad flagga bär
+    också `global_index` och skulle ritas på fel ord efter en förskjutning."""
+    stam = json_path.stem
+    behall = {f"{stam}.json", f"{stam}.srt", f"{stam}.txt"}
+    hinder = [p.name for p in familj_i(json_path.parent, stam)
+              if p.suffix.lower() not in LJUDANDELSER and p.name not in behall]
+    state_dir = PROJECT_ROOT / "granska" / "state"
+    if state_dir.is_dir():
+        hinder += [f"granska/state/{p.name}" for p in sorted(state_dir.iterdir())
+                   if stam_av(p.name) == stam
+                   or p.name.startswith(f"{stam}-propagering")]
+    if data.get("corrections_applied_at"):
+        hinder.append("applicerad")
+    return hinder
 
 
 # --------------------------------------------------------------------------- #

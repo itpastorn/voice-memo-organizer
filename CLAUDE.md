@@ -625,7 +625,37 @@ Två saker gör en rensning svårare än den ser ut:
   förstör besluten. De kräver att sidecarens index skrivs om i samma svep.
 
 Vakten **rensar därför inte** — den rapporterar, och avslutar med kod 1 när något
-hittas. Rensningen är ett eget steg som inte är byggt.
+hittas.
+
+**Omräknat 2026-10-13 — siffrorna ovan gäller inte längre.** Efter att de nio
+tysta filerna raderats (de bar flest träffar) återstod **49 träffar i 30
+filer**. "Mitt i tal" var dessutom fel mått: det räknade träffar som inte
+utgör hela sitt segment, men en token mitt i ett segment går lika bra att
+stryka så länge orden den täcker inte innehåller något annat. Det som räknas
+är om träffen är **ren** (`specialtoken_traffar` bär nu `ren`): **47 av 49
+är rena, 2 sitter ihop med tal.** Och risken var underskattad: vakten
+markerade bara filer med *fattade* beslut, men en ogranskad flagga bär också
+`global_index`. Med alla härledda filer räknade (`korrigeringar.tokenrensning_hinder`)
+var bara **3 filer utan något som pekar på ordindexen** — resten hade flaggats
+sedan september.
+
+**Rensningen, steg 1 (`rensa-token.py`, 2026-10-13).** Stryker rena träffar i
+transkript utan härledda filer; `--dry-run` är standard, `--kor` skriver.
+Segment som bara var token försvinner, tal behåller sina tider, `.srt`/`.txt`
+skrivs om, och JSON:en får ett `tokenrensning`-fält. Varje fil kontrolleras
+innan den skrivs — exakt tokenorden borta, varje övrigt ord med samma text och
+tider, `duration` orörd — och lämnas orörd om något avviker. Originalet sparas
+i `sakerhetskopior/tokenrensning/` (gitignorerad), **inte** som `-bak.json`:
+den betyder "applicerad" för GUI:t och apply, som då skulle granska mot den
+orensade texten. Loggas som `handelse=tokenrensning` i arkivloggen.
+
+Prövat mot ett låtsasarkiv med en konstruerad fil (ren token mitt i tal,
+hopklistrad token, tokensegment) och en fil med sidecar som ska lämnas: allt
+rätt, andra körningen gör ingenting. Sedan skarpt på de tre filerna i
+`trump-politik/` (16 tokenord, 4 tomma segment). **Kvar: 45 träffar i 27
+filer, alla med sidecar** — de kräver steg 2, som skriver om sidecarens index
+i samma svep. `rensa-token.rensa()` returnerar redan de borttagna indexen i
+ordning, vilket är vad förskjutningen behöver.
 
 Skadan är mindre än den ser ut: **noll flaggor** har slösats på tokenen, och
 **ingen `.md`** bär den — steg c städar bort den. Kvar är skräp i sanningskällan
