@@ -75,12 +75,19 @@ PAD = 20
 
 
 def build_prompt(words: list[dict], ctx_start: int, ctx_end: int,
-                 flag_start: int, flag_end: int, ordlista: list[str]) -> str:
+                 flag_start: int, flag_end: int, ordlista: list[str]) -> list[dict]:
+    """Användarmeddelandet som två textblock. Ordlistan är lika för varje bit i
+    filen och bär cachebrytpunkten, så att systemprompt + schema + ordlista
+    läses ur promptcachen från andra biten. Transkriptbiten är unik per anrop
+    och ligger efter brytpunkten. Sammanfogade är blocken exakt den text som
+    tidigare skickades som en sträng."""
     lines = [f"[{i}] {words[i]['word'].strip()}" for i in range(ctx_start, ctx_end)]
     ordlista_text = "\n".join(f"- {t}" for t in ordlista) if ordlista else "(tom)"
-    return (
+    ordlista_block = (
         "ORDLISTA (kända, rättstavade namn och begrepp):\n"
         f"{ordlista_text}\n\n"
+    )
+    transkript_block = (
         "TRANSKRIPT (ett ord per rad, [globalt index] framför varje). Flagga ENDAST "
         f"ord med index {flag_start}–{flag_end - 1}; raderna utanför det intervallet "
         "är bara kontext:\n"
@@ -88,6 +95,11 @@ def build_prompt(words: list[dict], ctx_start: int, ctx_end: int,
         "Returnera de ord i intervallet du misstänker är felhörda, med [index], vad "
         "du hörde, din gissade rättelse (tom om osäker) och ett kort skäl."
     )
+    return [
+        {"type": "text", "text": ordlista_block,
+         "cache_control": {"type": "ephemeral"}},
+        {"type": "text", "text": transkript_block},
+    ]
 
 
 def flag_chunk(client, words: list[dict], flag_start: int, flag_end: int,
@@ -163,7 +175,7 @@ def main() -> int:
 
     starts = list(range(0, limit, chunk))
     annotations: dict[int, str] = {}  # global index -> kommentar (dedupar naturligt)
-    in_tok = out_tok = 0
+    tokens = k.Tokenrakning()
 
     for n, start in enumerate(starts, start=1):
         end = min(start + chunk, limit)
@@ -176,16 +188,16 @@ def main() -> int:
             print(f"  bit {n}/{len(starts)} misslyckades, hoppar över: {e}",
                   file=sys.stderr)
             continue
-        in_tok += usage.input_tokens
-        out_tok += usage.output_tokens
+        tokenrad = tokens.lagg_till(usage)
         for f in flaggningar:
             forslag = f"{f.gissad_rattelse}? " if f.gissad_rattelse.strip() else ""
             annotations[f.index] = f"{forslag}({f.skal})"
         print(f"  bit {n}/{len(starts)} (ord {start}–{end - 1}): "
-              f"{len(flaggningar)} flaggade — totalt {len(annotations)}")
+              f"{len(flaggningar)} flaggade — totalt {len(annotations)}  [{tokenrad}]")
 
     if not annotations:
         print(f"Claude flaggade inga ord bland {limit} ord.")
+        print(f"Tokens:  {tokens.summering()}")
         return 0
 
     clusters = k.cluster(list(annotations), int(ccfg["merge_gap"]))
@@ -199,7 +211,7 @@ def main() -> int:
     print(f"Läste:   {json_path}")
     print(f"Skickade {limit} ord till {model} i {len(starts)} bitar")
     print(f"Flaggade {len(annotations)} ord i {len(clusters)} block")
-    print(f"Tokens:  in {in_tok}, ut {out_tok}")
+    print(f"Tokens:  {tokens.summering()}")
     print(f"Skrev:   {out_path}")
     return 0
 

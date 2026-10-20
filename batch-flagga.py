@@ -76,9 +76,9 @@ def upptack(cfg: dict, root: Path, n: int | None) -> list[Path]:
 
 
 def flagga_en(client, cfg: dict, json_path: Path, model: str,
-              chunk: int) -> tuple[int, int, int, int]:
+              chunk: int) -> tuple[int, k.Tokenrakning, int]:
     """Flagga EN fil och skriv både .txt och sidecar.
-    Returnerar (antal flaggor, tokens in, tokens ut, misslyckade bitar)."""
+    Returnerar (antal flaggor, filens tokenräkning, misslyckade bitar)."""
     data = json.loads(json_path.read_text(encoding="utf-8"))
     words = k.flatten_words(data.get("segments", []))
     if not words:
@@ -89,7 +89,8 @@ def flagga_en(client, cfg: dict, json_path: Path, model: str,
 
     import anthropic
     annotations: dict[int, str] = {}
-    in_tok = out_tok = misslyckade = 0
+    tokens = k.Tokenrakning()
+    misslyckade = 0
     for start in range(0, len(words), chunk):
         end = min(start + chunk, len(words))
         try:
@@ -98,8 +99,7 @@ def flagga_en(client, cfg: dict, json_path: Path, model: str,
             misslyckade += 1
             print(f"      bit {start}–{end - 1} misslyckades: {e}", file=sys.stderr)
             continue
-        in_tok += usage.input_tokens
-        out_tok += usage.output_tokens
+        print(f"      bit {start}–{end - 1}: {tokens.lagg_till(usage)}")
         for f in flaggningar:
             forslag = f"{f.gissad_rattelse}? " if f.gissad_rattelse.strip() else ""
             annotations[f.index] = f"{forslag}({f.skal})"
@@ -131,7 +131,7 @@ def flagga_en(client, cfg: dict, json_path: Path, model: str,
     json_path.with_name(f"{json_path.stem}-corrections.json").write_text(
         json.dumps(sidecar, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    return len(annotations), in_tok, out_tok, misslyckade
+    return len(annotations), tokens, misslyckade
 
 
 def main() -> int:
@@ -198,12 +198,13 @@ def main() -> int:
 
     ccfg = cfg["corrections"]
     model, chunk = ccfg["llm_modell"], int(ccfg["llm_chunk_ord"])
-    klara = flaggor_tot = in_tot = ut_tot = 0
+    klara = flaggor_tot = 0
+    totalt = k.Tokenrakning()
 
     for i, p in enumerate(mal, 1):
         print(f"[{i}/{len(mal)}] {p.name}")
         try:
-            nf, itok, otok, fel = flagga_en(client, cfg, p, model, chunk)
+            nf, fil, fel = flagga_en(client, cfg, p, model, chunk)
         except anthropic.AuthenticationError:
             print("FEL: ogiltig ANTHROPIC_API_KEY. Avbryter.", file=sys.stderr)
             return 1
@@ -214,22 +215,23 @@ def main() -> int:
         # Gick INGEN bit igenom är felet systemiskt (slut på krediter, nere API)
         # — då är det bättre att stanna än att bränna igenom resten av kön och
         # lämna 39 filer halvflaggade.
-        if fel and itok == 0:
+        # Räknat på anrop, inte på input_tokens: med cachen kan den ocachade
+        # delen bli liten, och det är inte samma sak som att ingenting gick.
+        if fel and fil.anrop == 0:
             print("FEL: ingen bit gick igenom — avbryter batchen i stället för "
                   "att lämna resten halvflaggad.", file=sys.stderr)
             return 1
 
         klara += 1
         flaggor_tot += nf
-        in_tot += itok
-        ut_tot += otok
+        totalt.lagg_ihop(fil)
         varning = f"  ({fel} bit(ar) misslyckades)" if fel else ""
-        print(f"      {nf} flaggor, {itok}+{otok} tokens{varning}")
+        print(f"      {nf} flaggor — {fil.summering()}{varning}")
 
-    faktisk = in_tot / 1e6 * PRIS_IN + ut_tot / 1e6 * PRIS_UT
     print()
     print(f"=== Klart: {klara}/{len(mal)} filer, {flaggor_tot} flaggor ===")
-    print(f"Tokens: in {in_tot}, ut {ut_tot}  (~${faktisk:.2f})")
+    print(f"Tokens: {totalt.summering()}")
+    print(f"Kostnad: ~${totalt.kostnad(PRIS_IN, PRIS_UT):.2f}")
     if klara:
         print("Öppna granska/valj.php för att granska — filerna står som klara där.")
     return 0 if klara == len(mal) else 1

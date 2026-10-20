@@ -64,6 +64,54 @@ def ladda(namn: str):
     return mod
 
 
+class Tokenrakning:
+    """Summerar `response.usage` över en körning, med promptcachens två fält.
+
+    `input_tokens` är bara den OCACHADE delen av indata. Det cachade prefixet
+    redovisas separat: `cache_creation_input_tokens` (skrivning, 1,25× pris vid
+    5 minuters livslängd) och `cache_read_input_tokens` (läsning, 0,1× pris).
+    Utan de två fälten går det inte att se om cachen träffar — och en cache
+    som tyst inte träffar ser ut precis som ingen cache alls."""
+
+    def __init__(self) -> None:
+        self.anrop = self.oc = self.skriv = self.las = self.ut = 0
+
+    def lagg_till(self, usage) -> str:
+        """Räkna in ett anrop. Returnerar en rad för loggen."""
+        skriv = getattr(usage, "cache_creation_input_tokens", 0) or 0
+        las = getattr(usage, "cache_read_input_tokens", 0) or 0
+        self.anrop += 1
+        self.oc += usage.input_tokens
+        self.skriv += skriv
+        self.las += las
+        self.ut += usage.output_tokens
+        return (f"in {usage.input_tokens}, cache skriv {skriv}, "
+                f"cache läs {las}, ut {usage.output_tokens}")
+
+    def lagg_ihop(self, annan: "Tokenrakning") -> None:
+        self.anrop += annan.anrop
+        self.oc += annan.oc
+        self.skriv += annan.skriv
+        self.las += annan.las
+        self.ut += annan.ut
+
+    @property
+    def indata(self) -> int:
+        """All indata, cachad eller inte."""
+        return self.oc + self.skriv + self.las
+
+    def kostnad(self, pris_in: float, pris_ut: float) -> float:
+        """Dollar, med cachens prisfaktorer."""
+        return ((self.oc + 1.25 * self.skriv + 0.1 * self.las) / 1e6 * pris_in
+                + self.ut / 1e6 * pris_ut)
+
+    def summering(self) -> str:
+        andel = self.las / self.indata if self.indata else 0.0
+        return (f"{self.anrop} anrop — indata {self.indata} (ocachad {self.oc}, "
+                f"cache skriv {self.skriv}, cache läs {self.las}; {andel:.0%} läst "
+                f"ur cachen), ut {self.ut}")
+
+
 def normalize_stem(stem: str) -> str:
     """Gemener, bindestreck, ASCII, aldrig understreck (File Naming Convention
     i CLAUDE.md). Speglar transkribera.py så att JSON-namnet kan härledas."""

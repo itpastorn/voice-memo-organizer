@@ -815,6 +815,29 @@ uppskattar kostnaden vid `--dry-run`, och är idempotent. Avbryter hela batchen 
 ingen bit går igenom — annars lämnas kön halvflaggad vid slut på API-krediter,
 vilket redan hänt en gång. Rör inte `current.json`.
 
+**Promptcache i steg b (2026-10-07).** `flagga-llm.py` och `granska-igen.py`
+skickar användarmeddelandet som två block: ordlistan med `cache_control`,
+sedan transkriptbiten. Texten är tecken för tecken densamma som förut
+(kontrollerat på 40 bitar; `count_tokens` identiskt). `korrigeringar.Tokenrakning`
+loggar `cache_creation_input_tokens`/`cache_read_input_tokens` per anrop.
+
+Det som avgjorde att det går att cacha var **utdataschemat**: `messages.parse`
+lägger ~650 tokens schema i prefixet. Utan det låg fyra temamappars prefix
+(system + ordlista) under Opus 4.8:s gräns på 1 024 tokens — `bibelsyn` 966,
+`god-karismatik` 975, `skapelse` 998, `wimber` 951 — och hade tyst inte
+cachats. Med schemat är alla över. Samma sak gör `forbattra.py` cachebar
+(system + schema 1 471 tokens), trots att den saknar ordlista; den är inte ändrad.
+
+**Uppmätt** på en kopia av `zego-profetiska-dekret` (1 354 ord, 5 bitar), två
+körningar före och två efter: 1 864 tokens läses ur cachen från andra biten,
+37–46 % av indata. **Indatakostnaden sjönk 31–42 %, men hela körningen bara
+~8–11 %**, eftersom utdata med tänkande står för ~75 % av kostnaden (~$0,30
+av ~$0,39). Runda 2 (Fable 5, 4 bitar): 2 069 tokens ur cachen, ~12 % billigare
+totalt. En andra fil i samma temamapp inom 5 minuter läser cachen redan från
+första biten. **Flaggningen påverkades inte mätbart:** gamla mot gamla
+överlappar 0,78 (Jaccard på flaggade index, 75 mot 69 flaggor), gamla mot nya
+0,74–0,79 — blockuppdelningen syns inte i bruset mellan körningar.
+
 **Propagering av fattade rättelser (`propagera-namn.py`, issue #7).** Detektorn
 bedömer varje ord isolerat, inte dokumentet: samma namn förvanskas olika många
 gånger och bara någon variant flaggas (`Boltz,` gick igenom medan `Bolts`

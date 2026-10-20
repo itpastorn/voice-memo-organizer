@@ -98,15 +98,20 @@ PAD = 20
 
 
 def build_prompt(words: list[dict], ctx_start: int, ctx_end: int,
-                 flag_start: int, flag_end: int, ordlista: list[str]) -> str:
+                 flag_start: int, flag_end: int, ordlista: list[str]) -> list[dict]:
+    """Användarmeddelandet som två textblock — se flagga-llm.build_prompt.
+    Ordlistan bär cachebrytpunkten; transkriptbiten är unik per anrop.
+    Sammanfogade är blocken exakt den tidigare strängen."""
     lines = []
     for i in range(ctx_start, ctx_end):
         mark = " [granskad]" if words[i].get("probability") == 1.0 else ""
         lines.append(f"[{i}] {words[i]['word'].strip()}{mark}")
     ordlista_text = "\n".join(f"- {t}" for t in ordlista) if ordlista else "(tom)"
-    return (
+    ordlista_block = (
         "ORDLISTA (kända, rättstavade namn och begrepp):\n"
         f"{ordlista_text}\n\n"
+    )
+    transkript_block = (
         "TRANSKRIPT (ett ord per rad, [globalt index] framför varje; [granskad] = "
         "människobekräftat i runda 1). Flagga ENDAST ord med index "
         f"{flag_start}–{flag_end - 1}; raderna utanför det intervallet är bara kontext:\n"
@@ -114,6 +119,11 @@ def build_prompt(words: list[dict], ctx_start: int, ctx_end: int,
         "Returnera de ord i intervallet du misstänker enligt de tre felklasserna, med "
         "[index], typ, gissad rättelse (tom vid bortfall/osäkerhet) och ett kort skäl."
     )
+    return [
+        {"type": "text", "text": ordlista_block,
+         "cache_control": {"type": "ephemeral"}},
+        {"type": "text", "text": transkript_block},
+    ]
 
 
 def flag_chunk(client, words: list[dict], flag_start: int, flag_end: int,
@@ -230,7 +240,7 @@ def main() -> int:
 
     flaggor: dict[int, Flaggning] = {}  # global index -> flaggning (dedupar naturligt)
     misslyckade: list[list[int]] = []   # [start, end)-intervall som inte granskades
-    in_tok = out_tok = 0
+    tokens = k.Tokenrakning()
 
     for n, (start, end) in enumerate(bitar, start=1):
         try:
@@ -243,12 +253,11 @@ def main() -> int:
             print(f"  bit {n}/{len(bitar)} misslyckades, hoppar över: {e}",
                   file=sys.stderr)
             continue
-        in_tok += usage.input_tokens
-        out_tok += usage.output_tokens
+        tokenrad = tokens.lagg_till(usage)
         for f in resultat:
             flaggor[f.index] = f
         print(f"  bit {n}/{len(bitar)} (ord {start}–{end - 1}): "
-              f"{len(resultat)} flaggade — totalt {len(flaggor)}")
+              f"{len(resultat)} flaggade — totalt {len(flaggor)}  [{tokenrad}]")
 
     # --- Bygg sidecaren (samma struktur som runda 1 + runda/base_json) ---
     # Vid --fortsatt behålls befintliga flaggor (inklusive ev. GUI-beslut);
@@ -336,7 +345,7 @@ def main() -> int:
     print(f"Bas:      {bak2_msg}")
     print(f"Granskade {len(bitar) - len(misslyckade)} av {len(bitar)} bitar med {model}")
     print(f"Flaggade  {len(flags)} ord ({bortfall} bortfall, {len(flags) - bortfall} ersättningar)")
-    print(f"Tokens:   in {in_tok}, ut {out_tok}")
+    print(f"Tokens:   {tokens.summering()}")
     print(f"Skrev:    {sidecar_path}")
     if state_msg:
         print(f"          {state_msg}")
