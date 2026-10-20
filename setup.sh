@@ -7,7 +7,8 @@
 #     source setup.sh          (eller: . setup.sh)
 #
 # Ger: harmapp, batch, flagga, granska, aktuell, namnvakt, tokenvakt, trvakt,
-# sortera, synka, bytnamn, propagera, applicera, forbattra, radera, vmo.
+# rensatoken, sortera, synka, bytnamn, propagera, applicera, forbattra, radera,
+# vmo.
 # Kör `vmohjalp` för listan med förklaringar.
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
@@ -37,6 +38,7 @@ else
     aktuell()   { "$PY" "$VMO/aktuell.py"            "$@"; }   # vilken fil är vald?
     namnvakt()  { "$PY" "$VMO/namnvakt.py"           "$@"; }   # kolliderande filnamn
     tokenvakt() { "$PY" "$VMO/tokenvakt.py"          "$@"; }   # specialtoken i texten
+    rensatoken() { "$PY" "$VMO/rensa-token.py"       "$@"; }   # stryk dem, före flagga
     trvakt()    { "$PY" "$VMO/transkriptionsvakt.py" "$@"; }   # duger transkriptionen?
     sortera()   { "$PY" "$VMO/sortera.py"            "$@"; }   # förslag på temamapp
     synka()     { "$PY" "$VMO/synka-namn.py"         "$@"; }   # laga efter nytt ljudfilnamn
@@ -74,6 +76,7 @@ Kommandon (alla tar samma flaggor som skripten):
   aktuell                 vilken fil är vald i GUI:t? (skriver inget)
   namnvakt [--alla]       filnamn som kolliderar och spärrar pipelinen
   tokenvakt [--alla]      Whisper-specialtoken som läckt in i transkripten
+  rensatoken [--kor]      stryk dem ur oflaggade transkript (kör FÖRE flagga)
   trvakt [--alla]         transkriptioner som inte duger (upprepningsloopar)
   sortera                 numrerade förslag på temamapp för memon i incoming/
   sortera --flytta N      godkänn förslag N (--till M: välj mapp själv)
@@ -85,7 +88,7 @@ Kommandon (alla tar samma flaggor som skripten):
   forbattra [--dry-run]   steg c -> .md, med negationsvakt efter varje fil
   vmo                     gå till projektmappen
 
-Ordningen: harmapp -> flagga -> granska -> propagera -> granska -> applicera
+Ordningen: harmapp -> rensatoken -> flagga -> granska -> propagera -> granska -> applicera
            -> forbattra -> sortera
 Nya memon ligger i incoming/ hela vägen och flyttas till temamapp sist.
 Se README.md i projektet för kostnader och fallgropar.

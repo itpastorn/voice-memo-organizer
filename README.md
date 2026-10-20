@@ -21,7 +21,7 @@ vmohjalp                 # listar kommandona
 ```
 
 Det ger `harmapp`, `batch`, `flagga`, `granska`, `aktuell`, `namnvakt`,
-`tokenvakt`, `trvakt`, `sortera`, `synka`, `bytnamn`, `radera`, `propagera`,
+`tokenvakt`, `rensatoken`, `trvakt`, `sortera`, `synka`, `bytnamn`, `radera`, `propagera`,
 `applicera`, `forbattra` och `vmo`. Alla tar samma flaggor som skripten
 (`--dry-run`, `--antal=N`, `--igen`, `--troskel=`). `setup.sh` sätter också
 `$VMO` och `$PY`, så den fullständiga formen — `"$PY" "$VMO/batch-flagga.py"` —
@@ -97,6 +97,23 @@ i åtta timmar. Begäran släpps alltid efteråt, också om körningen avbryts.
 **Kontrollera ändå kvoten efter en lång körning.** Ligger vägg/ljud i tiotal i
 stället för 0,5–2× har maskinen gått i vänteläge trots begäran; säg till då, för
 det betyder att en `SYSTEM`-begäran inte räcker på den här hårdvaran.
+
+### 1b. Stryk Whisper-token — innan du flaggar
+
+```bash
+rensatoken               # vad skulle strykas? (skriver inget)
+rensatoken --kor         # gör det
+```
+
+Whisper kan skriva sina styrtoken (`<|nospeech|>`) i texten som om de vore tal.
+`rensatoken` stryker dem ur `.json` och skriver om `.srt`/`.txt`; talet behåller
+sina tider och originalet sparas i `sakerhetskopior/tokenrensning/`.
+
+**Ordningen spelar roll.** Bara transkript som inget annat pekar på rensas —
+ingen sidecar, ingen `-bak.json`, ingen `.md`. Tokenorden räknas in i
+ordpositionerna, så en fil som redan flaggats skulle få flaggorna ritade på fel
+ord. Kör den alltså direkt efter steg a; efter `flagga` hoppar den över filen.
+Token som sitter ihop med riktiga ord (`h<|nospeech|>`) lämnas och listas för hand.
 
 ### 2. Flagga felhörningar (steg b) — ~$0,25/fil
 
@@ -304,6 +321,7 @@ en medveten ändring går inte att skilja från en bugg.
 | veta vilken fil som är vald | `aktuell` — fil, mapp, flaggor kvar, applicerad eller ej |
 | se vilka filnamn som spärrar pipelinen | `namnvakt` (`--alla` listar även de ofarliga avvikelserna) |
 | kontrollera om Whisper-token läckt in i texten | `tokenvakt` (`--alla` visar varje träff med tidsstämpel) |
+| stryka dem | `rensatoken` visar, `rensatoken --kor` gör det — bara i filer som inte flaggats än |
 | hitta transkriptioner som inte duger alls | `trvakt` — upprepningsloopar och filer med för få ord |
 | få ett memo ur `incoming/` till rätt temamapp | `sortera` föreslår numrerat, `sortera --flytta N` genomför |
 | jag har bytt namn på eller flyttat ljudfiler | `synka` visar vad som halkat efter, `synka --kor` lagar |
@@ -331,6 +349,7 @@ en medveten ändring går inte att skilja från en bugg.
 | **c** | Språklig förbättring → `.md` + `-borttaget.txt` | ✅ prototyp |
 | — | Negationsvakt: deterministisk kontroll av steg c-utdatan | ✅ |
 | — | Tokenvakt + transkriptionsvakt: duger texten alls? | ✅ rapporterar, rättar inte |
+| — | Tokenrensning (`rensatoken`) | ✅ oflaggade filer; flaggade väntar på steg 2 |
 | — | Sortering: förslag på temamapp, flytt på godkännande | ✅ |
 | **d** | QDA-taggning (kodbok, blocknivå) | ⬜ kodboken obeslutad |
 | **e** | SQLite-index (FTS5) för sökning | ⬜ |
@@ -355,7 +374,7 @@ fler verkliga fel eller mer brus avgörs först när de granskats.
 | # | Vad | Följd |
 | --- | --- | --- |
 | [#9](../../issues/9) | Modernt vänteläge stryper nattbatch | kod på plats; väntar på bevis i skarp drift |
-| [#12](../../issues/12) | Specialtoken kvar i 27 transkript | `tokenvakt` rapporterar, rensaren är inte byggd |
+| [#12](../../issues/12) | Specialtoken kvar i 27 flaggade transkript | `rensatoken` tar bara oflaggade filer; steg 2 (index i sidecars) är inte byggt |
 | [#8](../../issues/8) | Hastigheten spänner 0,56×–1,99× oförklarat | går inte att planera på |
 | [#11](../../issues/11) | Språkdetektering avstängd av config | engelska memon översätts tyst |
 | [#7](../../issues/7) | Samma namn förvanskat olika — bara ett flaggas | detektorn ser ord, inte dokument |
