@@ -792,7 +792,28 @@ ordagrant i prompten — och **inget** av dem landade:
 
 Slutsats: `kb-whisper-medium` väger sitt akustiska intryck långt tyngre än
 hotwords-listan, och 27 termer är sannolikt för trubbigt — hotwords är gjort för en
-handfull ord. Ordlisteuppdelningen behålls ändå: den bär **steg b:s** mappscopning,
+handfull ord.
+
+**Prov 4 (2026-10-22): bara två ord, och det hjälpte inte heller.** Lars
+frågade om *teologi* och *Gunther* kunde skickas med alltid — de är rättade 47
+respektive 17 gånger för hand (*trilogi*, *liberatilogin*, *filurgin*;
+*Dunter*, *Munter*, *Puster*). `hotwords="Gunther, teologi"`, small, samma
+inställningar som originalen, fyra filer (57 min) med **17 kända fel**:
+**0 av 17 rättade.** Ingen ny förekomst och ingen förlorad heller — prompten
+gjorde helt enkelt ingenting med de här orden. Övrig text drev 3–5 % mot
+septemberkörningen (ej kontrollerat om det är prompten eller Whispers egen
+variation; utan träffar spelar det ingen roll).
+
+Felbilden förklarar en del: **14 av 17 sitter i sammansättningar**
+(*liberalteologin* → *liberatilogin*, *liberaltyrkan*), där ett hotword för
+grundordet inte hjälper Whisper att dela ordet rätt. Men inte heller fristående
+*teologi* (`filogi`, `tylogin`, `teori`) eller *Gunther* (`Puster`) rättades.
+**Pröva inte hotwords igen på small/medium.** Alla 17 fel fångades av steg b
+och rättades av Lars; därefter sprider `propagera-namn.py` rättelsen till
+syskonen. Det är där de här orden hanteras.
+
+Biprodukt till issue #8: small gick på **0,35–0,43× realtid** i provet,
+mot medium-siffrorna 0,56–1,31× i Hårdvara. Ordlisteuppdelningen behålls ändå: den bär **steg b:s** mappscopning,
 som redan löst att `Nadia Bolz-Weber` fick detektorn att missa `Shawn Bolz`.
 
 ### b. Flaggning av oklarheter
